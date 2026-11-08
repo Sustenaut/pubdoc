@@ -39,7 +39,7 @@ def fakes(tmp_path):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     log = tmp_path / "calls.log"
-    for name, body in (("npx", NPX), ("typst", TYPST)):
+    for name, body in (("npx", NPX), ("typst", TYPST), ("review-builder-preview", "")):
         path = bin_dir / name
         path.write_text(STAND_IN.format(log=log, body=body))
         path.chmod(path.stat().st_mode | stat.S_IXUSR)
@@ -77,6 +77,13 @@ def document(repo, name, output):
     (doc / "index.md").write_text("---\ntitle: Jane Doe\n---\n")
     (doc / variant / "review-builder.yaml").write_text(
         f'title: "{name}"\nbuild_cmd: ["../../pubdoc", "build", ".."]\npdf_path: "main.pdf"\n')
+
+
+@given(parsers.parse('"{name}" also exports "{output}"'))
+def also_exports(repo, name, output):
+    variant = Path(output).parts[0]
+    (repo / name / variant).mkdir(parents=True, exist_ok=True)
+    (repo / name / variant / "review-builder.yaml").write_text(f'title: "{name} {variant}"\n')
 
 
 @given(parsers.parse('the file "{path}" reads "{text}"'))
