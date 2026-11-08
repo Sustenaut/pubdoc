@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pubdoc"
+version = "0.1.0"
+description = "Build, preview and approve MyST documents as Typst PDFs, with a shared template library and publet links."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "David Schryer", email = "schryer@gmail.com" }]
+# None: Curvenote runs through npx, and typst and review-builder are programs.
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/Sustenaut/pubdoc"
+
+[project.scripts]
+pubdoc = "pubdoc.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+pubdoc = ["templates/*", "templates/*/*"]
+
+# `make functional` measures the suite, the `pubdoc` processes it starts
+# included, into coverage/coverage.xml for SonarQube Cloud.
+[tool.coverage.run]
+source = ["pubdoc"]
+patch = ["subprocess", "execv"]
+parallel = true
+
+[tool.coverage.xml]
+output = "coverage/coverage.xml"

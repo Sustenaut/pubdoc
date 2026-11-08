@@ -1,0 +1,15 @@
+{
+  "code": [
+    "src/",
+    "pyproject.toml"
+  ],
+  "corpus": "corpus",
+  "key": "pub:sha2-256:pymtpc4dkw6posu4vvubrcwenpiv72wlqmlbp6wdgsrzb6aeynuq",
+  "manifest": {
+    "kind": "pyproject",
+    "path": "pyproject.toml"
+  },
+  "name": "pubdoc",
+  "package": "pkg.pubdoc",
+  "tag": "PKG-PUBDOC-11-2026"
+}

@@ -1,0 +1,13 @@
+{
+  "uses": [
+    {"plugin": "github.app-token", "paths": [".github/workflows/main.yml", ".github/workflows/pr.yml"], "mode": "required"},
+    {"plugin": "github.repo-ops", "paths": [".github/workflows/wheel.yml"], "mode": "required"},
+    {"plugin": "sonarcloud.scan", "paths": [".github/workflows/main.yml", ".github/workflows/pr.yml"], "mode": "required"}
+  ],
+  "other_hosts": [
+    {"host": "typst.app", "reason": "A link in an error message and in template descriptions; nothing calls it"}
+  ],
+  "exclude": [
+    {"path": "tests/**", "reason": "Stand-ins for npx and typst; nothing is called"}
+  ]
+}
