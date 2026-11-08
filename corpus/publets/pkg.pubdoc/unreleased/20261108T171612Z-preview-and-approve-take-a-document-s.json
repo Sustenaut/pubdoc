@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "preview and approve take a document's only variant when none is named: ./pubdoc approve cv"
+}

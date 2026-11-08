@@ -119,12 +119,14 @@ Run from the repository's root:
 ./pubdoc variants <name>                   # a document's variants
 ./pubdoc open <name> [port]                # a live Curvenote site of it
 ./pubdoc build <name>                      # every variant's main.typ and main.pdf
-./pubdoc preview <name> <variant> [port]   # review-builder's loop, with Accept
-./pubdoc approve <name> <variant>          # copy main.pdf into versions/, dated
+./pubdoc preview <name> [variant] [port]   # review-builder's loop, with Accept
+./pubdoc approve <name> [variant]          # copy main.pdf into versions/, dated
 ./pubdoc linkedin <name>/index.md          # a CV as plain text for LinkedIn
 ```
 
 `<name>` is a path to a document directory, so `./pubdoc build cv` builds
+`cv/cv/main.pdf`. `preview` and `approve` act on one variant; leave it out
+when the document has only one, so `./pubdoc approve cv` approves
 `cv/cv/main.pdf`. Accept in the preview page runs `approve`; commit the
 new `versions/*.pdf` afterwards.
 
@@ -151,8 +153,8 @@ project:
       output: ieee/main.typ
 ```
 
-`build` makes all of them in one pass; `preview` and `approve` take the
-variant (output directory) as their second argument.
+`build` makes all of them in one pass; `preview` and `approve` then need
+the variant (output directory) as their second argument.
 
 ## Links with `{pub}`
 

@@ -44,7 +44,17 @@ def doc_dir(name: str) -> Path:
     return path.resolve()
 
 
-def variant_dir(doc: Path, variant: str) -> Path:
+def variants(doc: Path) -> list[str]:
+    return [spec.parent.name for spec in sorted(doc.glob("*/review-builder.yaml"))]
+
+
+def variant_dir(doc: Path, variant: str | None) -> Path:
+    """The variant named, or a document's only variant when none is."""
+    if variant is None:
+        found = variants(doc)
+        if len(found) != 1:
+            die(f"{doc.name} has {len(found)} variants ({', '.join(found) or 'none'}); name one")
+        variant = found[0]
     path = doc / variant
     if not (path / "review-builder.yaml").is_file():
         die(f"{doc.name}/{variant} has no review-builder.yaml")
@@ -119,8 +129,8 @@ def cmd_list(_: argparse.Namespace) -> int:
 
 
 def cmd_variants(args: argparse.Namespace) -> int:
-    for spec in sorted(doc_dir(args.name).glob("*/review-builder.yaml")):
-        print(spec.parent.name)
+    for variant in variants(doc_dir(args.name)):
+        print(variant)
     return 0
 
 
@@ -152,10 +162,15 @@ def cmd_build(args: argparse.Namespace) -> int:
 
 
 def cmd_preview(args: argparse.Namespace) -> int:
-    vdir = variant_dir(doc_dir(args.name), args.variant)
+    doc = doc_dir(args.name)
+    variant, port = args.variant, args.port
+    # `preview cv 8746`: a number that names no variant is the port.
+    if variant and variant.isdigit() and port is None and not (doc / variant).is_dir():
+        variant, port = None, variant
+    vdir = variant_dir(doc, variant)
     preview = need("review-builder-preview", "install review-builder: pipx install ~/git/review-builder")
     os.chdir(vdir)
-    os.execv(preview, [preview, *([args.port] if args.port else [])])
+    os.execv(preview, [preview, *([port] if port else [])])
     return 0  # pragma: no cover - execv does not return
 
 
@@ -166,7 +181,7 @@ def cmd_approve(args: argparse.Namespace) -> int:
     if not built.is_file():
         die(f"{vdir}/main.pdf not built yet; run: pubdoc build {args.name}")
     names = yaml_value(vdir / "review-builder.yaml", "version_name")
-    name = names[0] if names and names[0] else f"{doc.name}_{args.variant}"
+    name = names[0] if names and names[0] else f"{doc.name}_{vdir.name}"
     target = Path("versions") / f"{name}_{datetime.date.today().isoformat()}.pdf"
     (vdir / "versions").mkdir(exist_ok=True)
     shutil.copyfile(built, vdir / target)
@@ -237,7 +252,9 @@ def parser() -> argparse.ArgumentParser:
         cmd.set_defaults(func=func)
 
     name = ("name", {"help": "a document directory: one holding a myst.yml"})
-    variant = ("variant", {"help": "a variant directory of it: one holding a review-builder.yaml"})
+    variant = ("variant", {"nargs": "?",
+                           "help": "a variant directory of it, holding a review-builder.yaml; "
+                                   "optional when it has only one"})
     port = ("port", {"nargs": "?", "help": "the port to serve on"})
     add("list", cmd_list, "the documents here")
     add("variants", cmd_variants, "a document's variants", name)
