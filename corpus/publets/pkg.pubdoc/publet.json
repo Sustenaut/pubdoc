@@ -1,0 +1,99 @@
+{
+  "claims": {
+    "identity": {
+      "class": "archival",
+      "content": "pubdoc 0.1.0 is released as v0.1.0 from commit 9f3baca25822d91d29a33458f40c4faf4ece41f4.",
+      "data": {
+        "columns": [
+          {
+            "name": "name"
+          },
+          {
+            "name": "version"
+          },
+          {
+            "name": "check"
+          },
+          {
+            "name": "expect"
+          },
+          {
+            "name": "tag"
+          },
+          {
+            "name": "commit"
+          }
+        ],
+        "rows": [
+          [
+            "pubdoc",
+            "0.1.0",
+            "",
+            "",
+            "v0.1.0",
+            "9f3baca25822d91d29a33458f40c4faf4ece41f4"
+          ]
+        ]
+      },
+      "scope": "the published release v0.1.0 of pubdoc",
+      "sources": [
+        {
+          "ref": "pubdoc",
+          "revision": "9f3baca25822d91d29a33458f40c4faf4ece41f4"
+        }
+      ]
+    },
+    "release": {
+      "class": "archival",
+      "content": "pubdoc 0.1.0 was released on 2026-11-08 from commit 9f3baca25822d91d29a33458f40c4faf4ece41f4 with these changes.",
+      "data": {
+        "columns": [
+          {
+            "name": "category"
+          },
+          {
+            "name": "change"
+          }
+        ],
+        "rows": [
+          [
+            "added",
+            "pubdoc: build, preview and approve MyST documents as Typst PDFs, carrying the cv-sidebar, lapreprint-typst and charged-ieee templates and the {pub}, annotation and LinkedIn plugins; pubdoc init writes ./pubdoc, which runs a release with uvx"
+          ]
+        ]
+      },
+      "depends": [
+        "#identity"
+      ],
+      "scope": "the published release v0.1.0 of pubdoc",
+      "sources": [
+        {
+          "ref": "pubdoc",
+          "revision": "9f3baca25822d91d29a33458f40c4faf4ece41f4"
+        }
+      ]
+    }
+  },
+  "created": "2026-11-08T00:00:00Z",
+  "sections": [
+    {
+      "heading": "Identity",
+      "items": [
+        {
+          "ref": "#identity"
+        }
+      ]
+    },
+    {
+      "heading": "Release",
+      "items": [
+        {
+          "ref": "#release"
+        }
+      ]
+    }
+  ],
+  "slug": "pkg.pubdoc",
+  "tag": "PKG-PUBDOC-11-2026",
+  "title": "pubdoc"
+}

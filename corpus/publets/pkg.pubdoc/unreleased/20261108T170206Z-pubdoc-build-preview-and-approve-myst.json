@@ -1,4 +1,0 @@
-{
-  "category": "added",
-  "change": "pubdoc: build, preview and approve MyST documents as Typst PDFs, carrying the cv-sidebar, lapreprint-typst and charged-ieee templates and the {pub}, annotation and LinkedIn plugins; pubdoc init writes ./pubdoc, which runs a release with uvx"
-}
