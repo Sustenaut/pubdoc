@@ -1,0 +1,23 @@
+jtex: v1
+kind: typst
+title: CV Sidebar
+description: >
+  Résumé/cover-letter template with rotated vertical section-label
+  sidebars and maroon accents - a from-scratch Typst port of
+  cv-builder's original hand-built CSS design (not a wrapper around
+  any existing Typst Universe package).
+template: template.typ
+files:
+  - cv-sidebar.typ
+  - template.typ
+version: 0.1.0
+license: MIT
+tags:
+  - resume
+  - cv
+  - cover-letter
+doc:
+  - id: title
+    required: true
+  - id: subtitle
+    required: false

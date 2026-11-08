@@ -1,0 +1,28 @@
+jtex: v1
+kind: typst
+title: Charged IEEE (local wrapper)
+description: >
+  Thin jtex wrapper around the @preview/charged-ieee Typst Universe
+  package (not itself a MyST template), so MyST/Curvenote can drive it
+  the same way as any other jtex template. See
+  https://typst.app/universe/package/charged-ieee for the underlying
+  package's own docs.
+template: template.typ
+files:
+  - template.typ
+version: 0.1.4
+license: MIT
+tags:
+  - ieee
+  - article
+  - paper
+doc:
+  - id: title
+    required: true
+  - id: authors
+    required: true
+  - id: keywords
+parts:
+  - id: abstract
+    description: The paper's abstract. Passed straight through to charged-ieee's `abstract`.
+    required: false
