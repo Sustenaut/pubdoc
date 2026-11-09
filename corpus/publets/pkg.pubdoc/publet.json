@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubdoc 0.1.0 is released as v0.1.0 from commit 9f3baca25822d91d29a33458f40c4faf4ece41f4.",
+      "content": "pubdoc 0.1.1 is released as v0.1.1 from commit e03cd83133251fb70a7a4a18ef09592f7a3111a3.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubdoc",
-            "0.1.0",
+            "0.1.1",
             "",
             "",
-            "v0.1.0",
-            "9f3baca25822d91d29a33458f40c4faf4ece41f4"
+            "v0.1.1",
+            "e03cd83133251fb70a7a4a18ef09592f7a3111a3"
           ]
         ]
       },
-      "scope": "the published release v0.1.0 of pubdoc",
+      "scope": "the published release v0.1.1 of pubdoc",
       "sources": [
         {
           "ref": "pubdoc",
-          "revision": "9f3baca25822d91d29a33458f40c4faf4ece41f4"
+          "revision": "e03cd83133251fb70a7a4a18ef09592f7a3111a3"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubdoc 0.1.0 was released on 2026-11-08 from commit 9f3baca25822d91d29a33458f40c4faf4ece41f4 with these changes.",
+      "content": "pubdoc 0.1.1 was released on 2026-11-08 from commit e03cd83133251fb70a7a4a18ef09592f7a3111a3 with these changes.",
       "data": {
         "columns": [
           {
@@ -58,18 +58,18 @@
         "rows": [
           [
             "added",
-            "pubdoc: build, preview and approve MyST documents as Typst PDFs, carrying the cv-sidebar, lapreprint-typst and charged-ieee templates and the {pub}, annotation and LinkedIn plugins; pubdoc init writes ./pubdoc, which runs a release with uvx"
+            "preview and approve take a document's only variant when none is named: ./pubdoc approve cv"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.1.0 of pubdoc",
+      "scope": "the published release v0.1.1 of pubdoc",
       "sources": [
         {
           "ref": "pubdoc",
-          "revision": "9f3baca25822d91d29a33458f40c4faf4ece41f4"
+          "revision": "e03cd83133251fb70a7a4a18ef09592f7a3111a3"
         }
       ]
     }
