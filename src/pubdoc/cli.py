@@ -23,6 +23,9 @@ CURVENOTE_VERSION = "0.17.2"
 TEMPLATES_DIR = Path(".pubdoc") / "templates"
 LAUNCHER = "pubdoc"
 WHEEL_URL = "https://github.com/Sustenaut/pubdoc/releases/download/v{version}/pubdoc-{version}-py3-none-any.whl"
+# The launcher's pin, one requirement line beside it, where pubkit's nightly
+# moves it to pubdoc's latest release like any other release wheel pin.
+PIN = "requirements-pubdoc.txt"
 
 
 def version() -> str:
@@ -145,20 +148,50 @@ def cmd_open(args: argparse.Namespace) -> int:
     return 0  # pragma: no cover - execv does not return
 
 
+def build(doc: Path, typst: str) -> str | None:
+    """Build every export of `doc`: None when all were built, else why one was not."""
+    outputs = yaml_value(doc / "myst.yml", "output")
+    if not outputs:
+        return f"{doc}/myst.yml lists no exports with an output:"
+    if subprocess.call(curvenote("build", "--typst"), cwd=doc) != 0:
+        return f"curvenote build failed for {doc}"
+    for out in outputs:
+        if subprocess.call([typst, "compile", str(doc / out)]) != 0:
+            return f"typst compile failed for {doc / out}"
+        print(f"built {doc / Path(out).with_suffix('.pdf')}")
+    return None
+
+
 def cmd_build(args: argparse.Namespace) -> int:
+    if args.all == (args.name is not None):
+        die("build takes a document's name, or --all for every document here", 2)
+    if args.all:
+        return build_all()
     doc = doc_dir(args.name)
     typst = resolve_typst()
     install_templates(doc.parent)
-    outputs = yaml_value(doc / "myst.yml", "output")
-    if not outputs:
-        die(f"{doc}/myst.yml lists no exports with an output:")
-    if subprocess.call(curvenote("build", "--typst"), cwd=doc) != 0:
-        die(f"curvenote build failed for {doc}")
-    for out in outputs:
-        if subprocess.call([typst, "compile", str(doc / out)]) != 0:
-            die(f"typst compile failed for {doc / out}")
-        print(f"built {doc / Path(out).with_suffix('.pdf')}")
+    if failure := build(doc, typst):
+        die(failure)
     return 0
+
+
+def build_all() -> int:
+    """Build every document `list` finds, each with all its variants' exports,
+    going on past a failure so one run reports them all."""
+    docs = [myst.parent.resolve() for myst in sorted(Path().glob("*/myst.yml"))]
+    if not docs:
+        die("no documents here: no directory holds a myst.yml")
+    typst = resolve_typst()
+    install_templates(Path().resolve())
+    failed = []
+    for doc in docs:
+        if failure := build(doc, typst):
+            print(f"pubdoc: {failure}", file=sys.stderr)
+            failed.append(doc.name)
+    built = len(docs) - len(failed)
+    print(f"built {built} of {len(docs)} documents"
+          + (f"; failed: {', '.join(failed)}" if failed else ""))
+    return 1 if failed else 0
 
 
 def cmd_preview(args: argparse.Namespace) -> int:
@@ -199,13 +232,14 @@ def cmd_linkedin(args: argparse.Namespace) -> int:
     return subprocess.call([node, str(script), str(source)])
 
 
-def launcher(release: str) -> str:
-    url = WHEEL_URL.format(version=release)
+def launcher() -> str:
     return f"""#!/usr/bin/env bash
-# Written by `pubdoc init` from pubdoc {release}; run `pubdoc init` from
-# another release to move this repository to it.
+# Written by `pubdoc init`. It names no release: it runs the pubdoc that
+# {PIN}, beside it, pins. Change that line, or let pubkit's nightly
+# move it, to move this repository to another release.
 #
-# Run this repository's pubdoc from its root:
+# Run this repository's pubdoc from its root, or from anywhere through this
+# script's path (review-builder runs ../../pubdoc from a variant directory):
 #
 #   ./pubdoc build cv
 #
@@ -213,12 +247,23 @@ def launcher(release: str) -> str:
 # is installed into the repository or the system.
 set -euo pipefail
 
+pin="$(dirname "${{BASH_SOURCE[0]}}")/{PIN}"
+if [ ! -f "$pin" ]; then
+  echo "pubdoc: no $pin, which pins the pubdoc ./pubdoc runs; run pubdoc init again" >&2
+  exit 1
+fi
+url="$(sed -n 's/^pubdoc @ //p' "$pin" | head -n 1)"
+if [ -z "$url" ]; then
+  echo "pubdoc: $pin has no line \"pubdoc @ URL\"; run pubdoc init again" >&2
+  exit 1
+fi
+
 if ! command -v uvx >/dev/null 2>&1; then
-  echo "pubdoc: ./pubdoc runs pubdoc {release} with uv, which is not installed: curl -LsSf https://astral.sh/uv/install.sh | sh" >&2
+  echo "pubdoc: ./pubdoc runs pubdoc with uv, which is not installed: curl -LsSf https://astral.sh/uv/install.sh | sh" >&2
   exit 127
 fi
 
-exec uvx --from "{url}" pubdoc "$@"
+exec uvx --from "$url" pubdoc "$@"
 """
 
 
@@ -227,9 +272,10 @@ def cmd_init(_: argparse.Namespace) -> int:
     path = Path(LAUNCHER)
     if path.is_dir():
         die(f"./{LAUNCHER} is a directory, such as an old pubdoc submodule; remove it first")
-    path.write_text(launcher(release), encoding="utf-8")
+    path.write_text(launcher(), encoding="utf-8")
     path.chmod(0o755)
-    print(f"wrote ./{LAUNCHER}, which runs pubdoc {release}")
+    Path(PIN).write_text(f"pubdoc @ {WHEEL_URL.format(version=release)}\n", encoding="utf-8")
+    print(f"wrote ./{LAUNCHER}, which runs the pubdoc ./{PIN} pins: {release}")
     ignore = Path(".gitignore")
     text = ignore.read_text(encoding="utf-8") if ignore.exists() else ""
     if "/.pubdoc/" not in text.splitlines():
@@ -259,12 +305,16 @@ def parser() -> argparse.ArgumentParser:
     add("list", cmd_list, "the documents here")
     add("variants", cmd_variants, "a document's variants", name)
     add("open", cmd_open, "a live Curvenote site of a document", name, port)
-    add("build", cmd_build, "every export in a document's myst.yml, to main.typ and main.pdf", name)
+    add("build", cmd_build, "every export in a document's myst.yml, to main.typ and main.pdf; "
+        "--all builds every document here, reporting each that fails",
+        ("name", {**name[1], "nargs": "?"}),
+        ("--all", {"action": "store_true", "help": "every document `list` finds"}))
     add("preview", cmd_preview, "review-builder's watch, build and Accept loop over one variant", name, variant, port)
     add("approve", cmd_approve, "copy a variant's main.pdf into its versions/, dated", name, variant)
     add("linkedin", cmd_linkedin, "a CV's plain-text export for LinkedIn",
         ("index", {"help": "the CV's index.md"}))
-    add("init", cmd_init, "write ./pubdoc, which runs this release with uvx, and ignore .pubdoc/")
+    add("init", cmd_init, f"write ./pubdoc and {PIN}, which pins this release for it to run "
+        "with uvx, and ignore .pubdoc/")
     return p
 
 
