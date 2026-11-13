@@ -1,4 +1,0 @@
-{
-  "category": "added",
-  "change": "pubdoc init writes requirements-pubdoc.txt, one line pinning this release's wheel (pubdoc @ https://github.com/Sustenaut/pubdoc/releases/download/vX.Y.Z/...whl), the release wheel pin pubkit's nightly moves; ./pubdoc names no release and runs the one that file pins, found beside the script from wherever it is called, and says so when the file or its pubdoc line is missing"
-}

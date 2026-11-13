@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubdoc 0.1.1 is released as v0.1.1 from commit e03cd83133251fb70a7a4a18ef09592f7a3111a3.",
+      "content": "pubdoc 0.1.2 is released as v0.1.2 from commit f8af434ea371c3758f71d47af496b44c41b04ba2.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubdoc",
-            "0.1.1",
+            "0.1.2",
             "",
             "",
-            "v0.1.1",
-            "e03cd83133251fb70a7a4a18ef09592f7a3111a3"
+            "v0.1.2",
+            "f8af434ea371c3758f71d47af496b44c41b04ba2"
           ]
         ]
       },
-      "scope": "the published release v0.1.1 of pubdoc",
+      "scope": "the published release v0.1.2 of pubdoc",
       "sources": [
         {
           "ref": "pubdoc",
-          "revision": "e03cd83133251fb70a7a4a18ef09592f7a3111a3"
+          "revision": "f8af434ea371c3758f71d47af496b44c41b04ba2"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubdoc 0.1.1 was released on 2026-11-08 from commit e03cd83133251fb70a7a4a18ef09592f7a3111a3 with these changes.",
+      "content": "pubdoc 0.1.2 was released on 2026-11-13 from commit f8af434ea371c3758f71d47af496b44c41b04ba2 with these changes.",
       "data": {
         "columns": [
           {
@@ -58,23 +58,27 @@
         "rows": [
           [
             "added",
-            "preview and approve take a document's only variant when none is named: ./pubdoc approve cv"
+            "pubdoc build --all builds every document pubdoc list finds, each with all its variants' exports, goes on past a document that fails, prints built N of M documents naming those that failed, and exits non-zero if any did; pubdoc build NAME is as before"
+          ],
+          [
+            "added",
+            "pubdoc init writes requirements-pubdoc.txt, one line pinning this release's wheel (pubdoc @ https://github.com/Sustenaut/pubdoc/releases/download/vX.Y.Z/...whl), the release wheel pin pubkit's nightly moves; ./pubdoc names no release and runs the one that file pins, found beside the script from wherever it is called, and says so when the file or its pubdoc line is missing"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.1.1 of pubdoc",
+      "scope": "the published release v0.1.2 of pubdoc",
       "sources": [
         {
           "ref": "pubdoc",
-          "revision": "e03cd83133251fb70a7a4a18ef09592f7a3111a3"
+          "revision": "f8af434ea371c3758f71d47af496b44c41b04ba2"
         }
       ]
     }
   },
-  "created": "2026-11-08T00:00:00Z",
+  "created": "2026-11-13T00:00:00Z",
   "sections": [
     {
       "heading": "Identity",
