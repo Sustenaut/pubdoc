@@ -34,15 +34,28 @@ From the repository's root, run a release once:
 uvx --from https://github.com/Sustenaut/pubdoc/releases/download/v0.1.0/pubdoc-0.1.0-py3-none-any.whl pubdoc init
 ```
 
-That writes `./pubdoc`, which runs the same release with uvx from then on,
-and adds `/.pubdoc/` to `.gitignore`. Commit both. To move to another
-release, run that release's `pubdoc init` the same way.
+That writes `requirements-pubdoc.txt`, one line pinning that release's
+wheel:
+
+```
+pubdoc @ https://github.com/Sustenaut/pubdoc/releases/download/v0.1.0/pubdoc-0.1.0-py3-none-any.whl
+```
+
+and `./pubdoc`, which names no release: it runs the one that file pins with
+uvx, from the repository's root or through its path from anywhere (as
+review-builder runs `../../pubdoc`). It also adds `/.pubdoc/` to
+`.gitignore`. Commit all three. To move to another release, change the
+line, or let pubkit's nightly move it: that line is a release wheel pin in
+a requirements file, which the nightly moves to pubdoc's latest release
+like any other. Running another release's `pubdoc init` the same way
+still works too.
 
 The repository then looks like this:
 
 ```
 <repo>/
 ├── pubdoc                      the launcher
+├── requirements-pubdoc.txt     the pubdoc release the launcher runs
 ├── publets/                    one Markdown file per linked concept
 ├── publets-local.json          short name -> publet id, shared by every doc
 ├── .gitignore
@@ -119,13 +132,17 @@ Run from the repository's root:
 ./pubdoc variants <name>                   # a document's variants
 ./pubdoc open <name> [port]                # a live Curvenote site of it
 ./pubdoc build <name>                      # every variant's main.typ and main.pdf
+./pubdoc build --all                       # every document's, reporting each that fails
 ./pubdoc preview <name> [variant] [port]   # review-builder's loop, with Accept
 ./pubdoc approve <name> [variant]          # copy main.pdf into versions/, dated
 ./pubdoc linkedin <name>/index.md          # a CV as plain text for LinkedIn
 ```
 
 `<name>` is a path to a document directory, so `./pubdoc build cv` builds
-`cv/cv/main.pdf`. `preview` and `approve` act on one variant; leave it out
+`cv/cv/main.pdf`. `./pubdoc build --all` builds every document `list`
+finds, each with all its variants, goes on past one that fails, prints
+`built N of M documents` (naming the ones that failed) and exits non-zero
+if any did. `preview` and `approve` act on one variant; leave it out
 when the document has only one, so `./pubdoc approve cv` approves
 `cv/cv/main.pdf`. Accept in the preview page runs `approve`; commit the
 new `versions/*.pdf` afterwards.
@@ -189,7 +206,7 @@ neither. To try a change on a real document repository, build the wheel
 
 A template or plugin change reaches a repository only when that
 repository moves to a release that has it. Rebuild every document there
-and compare the generated `main.typ` before committing the move.
+(`./pubdoc build --all`) and compare the generated `main.typ` before committing the move.
 
 ### Releasing
 

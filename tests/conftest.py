@@ -24,7 +24,8 @@ echo "$(basename "$0")|$PWD|$*" >> "{log}"
 {body}
 """
 NPX = 'if [ -n "$PUBDOC_TEST_FAIL" ]; then exit 3; fi\n'
-TYPST = 'touch "$(dirname "$2")/main.pdf"\n'
+TYPST = ('if [ -n "$PUBDOC_TEST_TYPST_FAIL" ] && [ "$2" = "$PUBDOC_TEST_TYPST_FAIL" ]; then exit 4; fi\n'
+         'touch "$(dirname "$2")/main.pdf"\n')
 
 
 @pytest.fixture
@@ -39,7 +40,7 @@ def fakes(tmp_path):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     log = tmp_path / "calls.log"
-    for name, body in (("npx", NPX), ("typst", TYPST), ("review-builder-preview", "")):
+    for name, body in (("npx", NPX), ("typst", TYPST), ("review-builder-preview", ""), ("uvx", "")):
         path = bin_dir / name
         path.write_text(STAND_IN.format(log=log, body=body))
         path.chmod(path.stat().st_mode | stat.S_IXUSR)
@@ -123,6 +124,11 @@ def does_not_exist(repo, path):
 @then(parsers.parse('"{path}" contains "{text}"'))
 def contains(repo, path, text):
     assert text in (repo / path).read_text()
+
+
+@then(parsers.parse('"{path}" does not contain "{text}"'))
+def lacks(repo, path, text):
+    assert text not in (repo / path).read_text()
 
 
 def today_pdf(prefix: str) -> str:

@@ -21,6 +21,10 @@ reason — it belongs in pubdoc.
 ## The `pubdoc` command
 
 Single dispatcher: `./pubdoc {list|variants|open|build|preview|approve} <name> [variant] [port]`.
+`build --all` runs `build` on every document `list` finds, after copying the
+templates once, and keeps going past a document that fails, so a single run
+says every document that no longer builds (a summary line names them, and
+it exits non-zero); `build <name>` still stops at the first failure.
 It replaced an older standalone Rust tool, also called `pubdoc`, whose
 source was lost, and then a shell script, `scripts/doc`; it does the same
 steps. Before `open` and `build` it copies this release's templates into
@@ -37,6 +41,16 @@ location. `review-builder.yaml`'s `build_cmd`/`commit_cmd` run with cwd =
 directory relative to that cwd, and `../../pubdoc` holds because
 every doc sits directly under the consumer repo's root, next to the
 `./pubdoc` launcher.
+
+The launcher names no release. It reads the wheel URL from
+`requirements-pubdoc.txt` beside it (found through the script's own path,
+so `../../pubdoc` from a variant directory reads the root's file), a line
+`pubdoc @ https://github.com/Sustenaut/pubdoc/releases/download/vX.Y.Z/pubdoc-X.Y.Z-py3-none-any.whl`,
+and runs `uvx --from` that URL. That is the form of a release wheel pin
+pubkit's nightly moves in any requirements file, so moving a repository
+to a new pubdoc touches only that one line, and needs no `pubdoc init`;
+without the file, or without a `pubdoc @` line in it, the launcher says so
+and stops.
 
 `open` and `build` operate on a whole *document* (no variant argument):
 `build` regenerates every variant listed in that doc's `myst.yml` in one

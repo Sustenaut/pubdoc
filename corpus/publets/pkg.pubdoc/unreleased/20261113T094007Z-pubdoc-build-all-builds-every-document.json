@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "pubdoc build --all builds every document pubdoc list finds, each with all its variants' exports, goes on past a document that fails, prints built N of M documents naming those that failed, and exits non-zero if any did; pubdoc build NAME is as before"
+}
