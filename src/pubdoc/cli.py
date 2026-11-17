@@ -23,7 +23,7 @@ CURVENOTE_VERSION = "0.17.2"
 TEMPLATES_DIR = Path(".pubdoc") / "templates"
 LAUNCHER = "pubdoc"
 WHEEL_URL = "https://github.com/Sustenaut/pubdoc/releases/download/v{version}/pubdoc-{version}-py3-none-any.whl"
-# The launcher's pin, one requirement line beside it, where pubkit's nightly
+# The launcher's pin, one requirement line beside it, where pubrules's nightly
 # moves it to pubdoc's latest release like any other release wheel pin.
 PIN = "requirements-pubdoc.txt"
 
@@ -235,7 +235,7 @@ def cmd_linkedin(args: argparse.Namespace) -> int:
 def launcher() -> str:
     return f"""#!/usr/bin/env bash
 # Written by `pubdoc init`. It names no release: it runs the pubdoc that
-# {PIN}, beside it, pins. Change that line, or let pubkit's nightly
+# {PIN}, beside it, pins. Change that line, or let pubrules's nightly
 # move it, to move this repository to another release.
 #
 # Run this repository's pubdoc from its root, or from anywhere through this

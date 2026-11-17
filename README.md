@@ -45,7 +45,7 @@ and `./pubdoc`, which names no release: it runs the one that file pins with
 uvx, from the repository's root or through its path from anywhere (as
 review-builder runs `../../pubdoc`). It also adds `/.pubdoc/` to
 `.gitignore`. Commit all three. To move to another release, change the
-line, or let pubkit's nightly move it: that line is a release wheel pin in
+line, or let pubrules's nightly move it: that line is a release wheel pin in
 a requirements file, which the nightly moves to pubdoc's latest release
 like any other. Running another release's `pubdoc init` the same way
 still works too.

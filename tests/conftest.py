@@ -1,5 +1,5 @@
 """pubdoc's suite. The steps it does not define here (`it succeeds`, `it
-prints ...`) are pubkit's plugin's.
+prints ...`) are pubrules's plugin's.
 
 Every scenario runs in a scratch repository, with stand-ins for npx and
 typst first on PATH and HOME pointed at the scratch directory, so no real

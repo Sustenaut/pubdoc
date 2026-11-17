@@ -26,7 +26,7 @@ def holds_once(repo, path, line):
     assert (repo / path).read_text().splitlines().count(line) == 1
 
 
-# pubkit's nightly moves a release wheel pin of this form (pubkit's
+# pubrules's nightly moves a release wheel pin of this form (pubrules's
 # nightly.WHEEL_PIN), in a file whose name holds "requirements" and ends .txt.
 WHEEL_PIN = re.compile(r"(?P<lead>[A-Za-z0-9][A-Za-z0-9_.-]*(?:\[[^\]]*\])?\s*@\s*)https://github\.com/"
                        r"(?P<owner>[A-Za-z0-9][A-Za-z0-9-]*)/(?P<repo>[A-Za-z0-9_.-]+)/releases/download/"

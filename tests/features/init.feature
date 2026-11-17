@@ -1,6 +1,6 @@
 Feature: pubdoc init sets a repository up to run this release
   `init` writes requirements-pubdoc.txt, which pins this release's wheel in
-  the form pubkit's nightly moves, and ./pubdoc, which names no release and
+  the form pubrules's nightly moves, and ./pubdoc, which names no release and
   runs the one that file pins with uvx; it also ignores the templates every
   build copies into .pubdoc/.
 
