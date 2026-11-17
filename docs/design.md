@@ -47,7 +47,7 @@ The launcher names no release. It reads the wheel URL from
 so `../../pubdoc` from a variant directory reads the root's file), a line
 `pubdoc @ https://github.com/Sustenaut/pubdoc/releases/download/vX.Y.Z/pubdoc-X.Y.Z-py3-none-any.whl`,
 and runs `uvx --from` that URL. That is the form of a release wheel pin
-pubkit's nightly moves in any requirements file, so moving a repository
+pubrules's nightly moves in any requirements file, so moving a repository
 to a new pubdoc touches only that one line, and needs no `pubdoc init`;
 without the file, or without a `pubdoc @` line in it, the launcher says so
 and stops.
