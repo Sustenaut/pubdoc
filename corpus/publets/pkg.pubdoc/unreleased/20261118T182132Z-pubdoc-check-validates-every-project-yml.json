@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "pubdoc check validates every project.yml and doc.yml git knows of, in any repository: the schema, every name they refer to, each doc's required parts and that doc.yml only narrows; pubdoc list shows projects and their docs; pubdoc new-project starts one; checkers and places are named now and noted as not implemented yet"
+}

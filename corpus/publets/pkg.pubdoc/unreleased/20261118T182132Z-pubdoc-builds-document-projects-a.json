@@ -1,0 +1,4 @@
+{
+  "category": "changed",
+  "change": "pubdoc builds document projects: a project.yml (parts, variants, layouts, review steps, publications; schema shipped in the package) and one directory of MyST parts per doc, with shared parts docs start from, <part>.<variant>.md overrides and an optional doc.yml that only narrows; build, preview and approve take <project>/<doc> and write <doc>/build/<variant>/<layout>.<ext> (build/ ignores itself) and <doc>/versions/; the old layout, a myst.yml and per-variant review-builder.yaml in each document, is gone, and init no longer touches .gitignore"
+}

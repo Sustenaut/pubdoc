@@ -1,82 +1,166 @@
-Feature: pubdoc builds a document's exports with the templates it carries
-  `build` copies this release's templates into .pubdoc/templates/ beside
-  the documents, runs the pinned Curvenote in the document's directory, and
-  compiles every export myst.yml lists. Stand-ins for npx and typst record
-  what they were asked.
+Feature: pubdoc builds every variant and layout of a doc
+  `build` stages a doc's parts, and the shared parts they start from, in
+  the doc's build/src/, writes the MyST configuration for each Typst layout
+  there from project.yml, runs the pinned Curvenote in it, compiles each
+  export to build/<variant>/<layout>.pdf, and runs each exporter layout.
+  build/ ignores itself. Stand-ins for npx and typst record what they were
+  asked; the LinkedIn exporter is the real one, run with node.
 
   Background:
-    Given a document "cv" exporting "cv/main.typ"
+    Given the example project
 
-  Scenario: build runs Curvenote, then typst on each export
-    When I run pubdoc "build" "cv"
+  Scenario: build makes every variant x layout of a doc
+    When I run pubdoc "build" "job-applications/acme"
     Then it succeeds
-    And it prints "built"
-    And npx was run in "cv" with "--yes curvenote@0.17.2 build --typst"
-    And typst compiled "cv/cv/main.typ"
-    And ".pubdoc/templates/cv-sidebar/template.yml" exists
-    And ".pubdoc/templates/pub-plugin.mjs" exists
+    And npx was run in "job-applications/acme/build/src" with "--yes curvenote@0.17.2 build --typst"
+    And typst compiled "job-applications/acme/build/engineering/letter-pdf.typ" to "job-applications/acme/build/engineering/letter-pdf.pdf"
+    And typst compiled "job-applications/acme/build/engineering/cv-pdf.typ" to "job-applications/acme/build/engineering/cv-pdf.pdf"
+    And typst compiled "job-applications/acme/build/research/letter-pdf.typ" to "job-applications/acme/build/research/letter-pdf.pdf"
+    And typst compiled "job-applications/acme/build/research/cv-pdf.typ" to "job-applications/acme/build/research/cv-pdf.pdf"
+    And it prints "built job-applications/acme/build/research/cv-linkedin.txt"
+    And "job-applications/acme/build/research/cv-linkedin.txt" contains "Python"
+    And "job-applications/acme/build/.gitignore" contains "*"
+    And "job-applications/acme/build/templates/cv-sidebar/template.yml" exists
 
-  Scenario: build removes a template file this release does not carry
-    Given the file ".pubdoc/templates/old.typ" reads "stale"
-    When I run pubdoc "build" "cv"
+  Scenario: Each variant takes its own override, the doc's part, or the shared part, in that order
+    When I run pubdoc "build" "job-applications/acme"
     Then it succeeds
-    And ".pubdoc/templates/old.typ" does not exist
+    And "job-applications/acme/build/src/myst.yml" contains "article: acme/letter.md"
+    And "job-applications/acme/build/src/myst.yml" contains "article: acme/letter.research.md"
+    And "job-applications/acme/build/src/myst.yml" contains "article: shared/base-cv/cv.md"
+    And "job-applications/acme/build/src/myst.yml" contains "article: shared/base-cv/cv.research.md"
+    And "job-applications/acme/build/src/myst.yml" contains "template: ../templates/cv-sidebar"
+    And "job-applications/acme/build/src/myst.yml" contains "output: ../research/cv-pdf.typ"
+    And "job-applications/acme/build/src/myst.yml" contains "../templates/pub-plugin.mjs"
+    And "job-applications/acme/build/src/shared/base-cv/cv.md" exists
 
-  Scenario: build runs from a variant directory, as review-builder does
-    When I run pubdoc "build" ".." in "cv/cv"
+  Scenario: A doc's own part replaces the shared one, and can include it
+    Given the file "job-applications/acme/cv.md" reads:
+      """
+      ```{include} ../shared/base-cv/cv.md
+      ```
+      """
+    When I run pubdoc "build" "job-applications/acme"
     Then it succeeds
-    And typst compiled "cv/cv/main.typ"
-    And ".pubdoc/templates/cv-sidebar/template.yml" exists
+    And "job-applications/acme/build/src/myst.yml" contains "article: acme/cv.md"
+    And "job-applications/acme/build/src/myst.yml" does not contain "article: shared/base-cv/cv.md"
+    And "job-applications/acme/build/src/acme/cv.md" contains "../shared/base-cv/cv.md"
+    And "job-applications/acme/build/src/shared/base-cv/cv.md" exists
+
+  Scenario: A doc.yml that narrows builds only what it keeps
+    When I run pubdoc "build" "job-applications/globex"
+    Then it succeeds
+    And typst compiled "job-applications/globex/build/engineering/cv-pdf.typ" to "job-applications/globex/build/engineering/cv-pdf.pdf"
+    And "job-applications/globex/build/research" does not exist
+    And "job-applications/globex/build/engineering/cv-linkedin.txt" does not exist
+
+  Scenario: A project builds each of its docs
+    When I run pubdoc "build" "job-applications"
+    Then it succeeds
+    And typst compiled "job-applications/acme/build/research/cv-pdf.typ" to "job-applications/acme/build/research/cv-pdf.pdf"
+    And typst compiled "job-applications/globex/build/engineering/letter-pdf.typ" to "job-applications/globex/build/engineering/letter-pdf.pdf"
+
+  Scenario: --variant and --layout build one render, as a preview does
+    When I run pubdoc "build" "job-applications/acme" "--variant" "research" "--layout" "cv-pdf"
+    Then it succeeds
+    And typst compiled "job-applications/acme/build/research/cv-pdf.typ" to "job-applications/acme/build/research/cv-pdf.pdf"
+    And typst compiled only once
+    And "job-applications/acme/build/research/cv-linkedin.txt" does not exist
+
+  Scenario: An optional part a doc does not supply builds nothing
+    Given in "job-applications/project.yml" "  cv-linkedin:" becomes "  webpage-pdf: {part: webpage, template: lapreprint-typst, format: pdf}\n  cv-linkedin:"
+    When I run pubdoc "build" "job-applications/acme"
+    Then it succeeds
+    And "job-applications/acme/build/src/myst.yml" does not contain "webpage"
+
+  Scenario: build runs from anywhere, given the doc's path
+    When I run pubdoc "build" "../acme" in "job-applications/globex"
+    Then it succeeds
+    And typst compiled "job-applications/acme/build/research/cv-pdf.typ" to "job-applications/acme/build/research/cv-pdf.pdf"
+
+  Scenario: build removes what this build did not write
+    Given the file "job-applications/acme/build/templates/old.typ" reads "stale"
+    And the file "job-applications/acme/build/src/acme/old.md" reads "stale"
+    When I run pubdoc "build" "job-applications/acme"
+    Then it succeeds
+    And "job-applications/acme/build/templates/old.typ" does not exist
+    And "job-applications/acme/build/src/acme/old.md" does not exist
+
+  Scenario: Without publets-local.json the {pub} plugin is left out
+    Given the file "publets-local.json" is gone
+    And in "job-applications/project.yml" "  cv-linkedin: {part: cv, exporter: linkedin, format: text}\n" becomes "\n"
+    And in "job-applications/project.yml" "letter-pdf, cv-pdf, cv-linkedin]" becomes "letter-pdf, cv-pdf]"
+    When I run pubdoc "build" "job-applications/acme"
+    Then it succeeds
+    And "job-applications/acme/build/src/myst.yml" does not contain "pub-plugin"
+    And "job-applications/acme/build/src/myst.yml" contains "annotations.mjs"
+
+  Scenario: build refuses a project that does not check
+    Given in "job-applications/project.yml" "{part: letter," becomes "{part: lettr,"
+    When I run pubdoc "build" "job-applications/acme"
+    Then the exit code is 1
+    And stderr mentions "layouts.letter-pdf.part: no part 'lettr'"
+    And stderr mentions "job-applications/project.yml has 1 problem(s); see `pubdoc check`"
+
+  Scenario Outline: build needs a doc or a project
+    When I run pubdoc "build" "<name>"
+    Then the exit code is 1
+    And stderr mentions "<message>"
+
+    Examples:
+      | name                         | message                                                                     |
+      | nothing                      | nothing is not a doc or a project: no project.yml in it or the directory above |
+      | job-applications/shared      | job-applications/shared is no doc of job-applications                        |
 
   Scenario: Without typst build says how to get it
     Given no typst is installed
-    When I run pubdoc "build" "cv"
+    When I run pubdoc "build" "job-applications/acme"
     Then the exit code is 1
     And stderr mentions "no 'typst' on PATH"
 
   Scenario: A failing Curvenote stops the build
     Given Curvenote fails
-    When I run pubdoc "build" "cv"
+    When I run pubdoc "build" "job-applications/acme"
     Then the exit code is 1
-    And stderr mentions "curvenote build failed"
+    And stderr mentions "curvenote build failed for job-applications/acme"
 
-  Scenario: A directory without myst.yml is not a document
-    When I run pubdoc "build" "nothing"
-    Then the exit code is 1
-    And stderr mentions "nothing has no myst.yml"
-
-  Scenario: build --all builds every document, each with every export
-    Given a document "letter" exporting "letter/main.typ"
-    And "cv" also exports "short/main.typ"
+  Scenario: build --all builds every doc of every project
     When I run pubdoc "build" "--all"
     Then it succeeds
-    And typst compiled "cv/cv/main.typ"
-    And typst compiled "letter/letter/main.typ"
-    And it prints "built 2 of 2 documents"
+    And it prints "built 2 of 2 docs"
 
-  Scenario: build --all goes on past a failing document, reports each, and fails
-    Given a document "letter" exporting "letter/main.typ"
-    And a document "paper" exporting "paper/main.typ"
-    And typst fails on "letter/letter/main.typ"
+  Scenario: build --all goes on past a failing doc, reports each, and fails
+    Given typst fails on "job-applications/acme/build/engineering/letter-pdf.typ"
     When I run pubdoc "build" "--all"
     Then the exit code is 1
-    And typst compiled "cv/cv/main.typ"
-    And typst compiled "paper/paper/main.typ"
+    And typst compiled "job-applications/globex/build/engineering/cv-pdf.typ" to "job-applications/globex/build/engineering/cv-pdf.pdf"
     And stderr mentions "typst compile failed for"
-    And it prints "built 2 of 3 documents; failed: letter"
+    And it prints "built 1 of 2 docs; failed: job-applications/acme"
 
-  Scenario: build --all with no documents says so
-    Given no documents
+  Scenario: build --all counts a project that does not check as failed
+    Given the file "other/project.yml" reads "project: other"
     When I run pubdoc "build" "--all"
     Then the exit code is 1
-    And stderr mentions "no documents here"
+    And stderr mentions "other/project.yml: 'purpose' is a required property"
+    And it prints "built 2 of 3 docs; failed: other (does not check)"
 
-  Scenario Outline: build takes a name or --all, not both or neither
+  Scenario: build --all with no projects says so
+    Given the file "job-applications/project.yml" is gone
+    When I run pubdoc "build" "--all"
+    Then the exit code is 1
+    And stderr mentions "no projects here"
+
+  Scenario Outline: build takes a doc or --all, not both or neither
     When I run pubdoc <args>
     Then the exit code is 2
-    And stderr mentions "or --all for every document here"
+    And stderr mentions "or --all for every doc here"
 
     Examples:
-      | args                  |
-      | "build"               |
-      | "build" "cv" "--all"  |
+      | args                                     |
+      | "build"                                  |
+      | "build" "job-applications/acme" "--all"  |
+
+  Scenario: open serves a live Curvenote site of a doc's staged parts
+    When I run pubdoc "open" "job-applications/acme" "--port" "3000"
+    Then it succeeds
+    And npx was run in "job-applications/acme/build/src" with "--yes curvenote@0.17.2 start --port 3000"

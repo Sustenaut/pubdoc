@@ -3,3 +3,6 @@
 -r requirements-pubrules.txt
 # `make functional` measures the suite, the `pubdoc` processes it starts included.
 coverage==7.16.2
+# pubdoc's own dependencies: venv installs the checkout with --no-deps.
+pyyaml==6.0.3
+jsonschema==4.26.0

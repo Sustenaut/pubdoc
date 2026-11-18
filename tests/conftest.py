@@ -12,6 +12,7 @@ import datetime
 import os
 import shutil
 import stat
+import subprocess
 import sys
 from pathlib import Path
 
@@ -25,7 +26,7 @@ echo "$(basename "$0")|$PWD|$*" >> "{log}"
 """
 NPX = 'if [ -n "$PUBDOC_TEST_FAIL" ]; then exit 3; fi\n'
 TYPST = ('if [ -n "$PUBDOC_TEST_TYPST_FAIL" ] && [ "$2" = "$PUBDOC_TEST_TYPST_FAIL" ]; then exit 4; fi\n'
-         'touch "$(dirname "$2")/main.pdf"\n')
+         'mkdir -p "$(dirname "$3")" && touch "$3"\n')
 
 
 @pytest.fixture
@@ -67,24 +68,44 @@ def calls(tmp_path) -> list[tuple[str, str, str]]:
     return [tuple(line.split("|", 2)) for line in lines]
 
 
-@given(parsers.parse('a document "{name}" exporting "{output}"'))
-def document(repo, name, output):
-    doc = repo / name
-    variant = Path(output).parts[0]
-    (doc / variant).mkdir(parents=True, exist_ok=True)
-    (doc / "myst.yml").write_text(
-        "version: 1\nproject:\n  exports:\n    - format: typst\n"
-        f"      template: ../.pubdoc/templates/cv-sidebar\n      output: {output}\n")
-    (doc / "index.md").write_text("---\ntitle: Jane Doe\n---\n")
-    (doc / variant / "review-builder.yaml").write_text(
-        f'title: "{name}"\nbuild_cmd: ["../../pubdoc", "build", ".."]\npdf_path: "main.pdf"\n')
+EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 
 
-@given(parsers.parse('"{name}" also exports "{output}"'))
-def also_exports(repo, name, output):
-    variant = Path(output).parts[0]
-    (repo / name / variant).mkdir(parents=True, exist_ok=True)
-    (repo / name / variant / "review-builder.yaml").write_text(f'title: "{name} {variant}"\n')
+@given("the example project")
+def example_project(repo):
+    """examples/: job-applications (a letter and a CV starting from a shared
+    base CV, two variants; docs acme and globex) and the publets its CV links to."""
+    for item in EXAMPLES.iterdir():
+        if item.is_dir():
+            shutil.copytree(item, repo / item.name, ignore=shutil.ignore_patterns("build", "versions"))
+        else:
+            shutil.copy(item, repo / item.name)
+
+
+@given("the repository is a git work tree")
+def git_repo(repo):
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+
+
+@given(parsers.parse('the file "{path}" reads:'))
+def file_reads_block(repo, path, docstring):
+    target = repo / path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(docstring + "\n")
+
+
+@given(parsers.parse('in "{path}" "{old}" becomes "{new}"'))
+def replaced(repo, path, old, new):
+    target = repo / path
+    text = target.read_text()
+    old, new = old.replace("\\n", "\n"), new.replace("\\n", "\n")
+    assert old in text, f"{old!r} is not in {path}"
+    target.write_text(text.replace(old, new))
+
+
+@given(parsers.parse('the file "{path}" is gone'))
+def gone(repo, path):
+    (repo / path).unlink()
 
 
 @given(parsers.parse('the file "{path}" reads "{text}"'))
