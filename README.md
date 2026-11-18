@@ -227,7 +227,11 @@ make functional    # the Gherkin suite in tests/features/
 ```
 
 The suite runs pubdoc against stand-ins for npx and typst, so it needs
-neither. To try a change on a real document repository, build the wheel
+neither. pubdoc's own dependencies (PyYAML and jsonschema) are
+ranges in `pyproject.toml`, as a package's are, and pinned with hashes for
+the suite in `tests/requirements.lock`. SonarQube Cloud reads no lock in that
+format, so `pubrules.json` turns off its "no lock file beside
+pyproject.toml" rule (`text:S8565`) for that one file, as pubrules does. To try a change on a real document repository, build the wheel
 (`make wheel`) and run it there with `uvx --from dist/pubdoc-*.whl pubdoc build <name>`.
 
 A template or plugin change reaches a repository only when that
