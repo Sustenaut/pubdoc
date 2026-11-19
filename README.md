@@ -196,7 +196,11 @@ ls-files` (tracked and untracked, not ignored), so it works in any
 repository; outside a git work tree it searches the disk. `build` checks
 the project first and refuses one with problems.
 
-`build` writes `<doc>/build/<variant>/<layout>.<ext>`: `.pdf` for a
+`build` renders with the fonts pubdoc carries alone, never the machine's
+(`src/pubdoc/fonts/README.md`), so a render is the same wherever it is made;
+`build --date YYYY-MM-DD` gives the doc the date templates print (unless a
+part sets its own) and stamps its PDFs with it, as `approve` does with the
+approval date. `build` writes `<doc>/build/<variant>/<layout>.<ext>`: `.pdf` for a
 template layout (its Typst source in `<variant>/<layout>/main.typ`), `.txt` for the
 LinkedIn exporter. `build --all` goes on past a doc that fails, prints
 `built N of M docs` (naming the ones that failed) and exits non-zero if

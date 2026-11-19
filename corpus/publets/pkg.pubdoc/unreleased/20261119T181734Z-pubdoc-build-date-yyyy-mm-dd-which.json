@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "pubdoc build --date YYYY-MM-DD, which approve now passes too: the doc's date, which templates print, unless a part sets its own, and the PDFs' creation time; with it and the pinned fonts, the PDFs approved before versions existed rebuild identically"
+}

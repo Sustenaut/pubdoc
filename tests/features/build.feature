@@ -169,3 +169,24 @@ Feature: pubdoc builds every variant and layout of a doc
     And npx was run in "job-applications/acme/build/site" with "--yes curvenote@0.17.2 start --port 3000"
     And "job-applications/acme/build/site/myst.yml" contains "file: shared/base-cv/cv.research.md"
     And "job-applications/acme/build/site/myst.yml" contains "file: acme/letter.md"
+
+  Scenario: typst renders with the fonts pubdoc carries, never the machine's
+    When I run pubdoc "build" "job-applications/acme"
+    Then it succeeds
+    And typst saw pubdoc's fonts alone
+
+  Scenario: build --date dates the doc and its PDFs, as approve does
+    When I run pubdoc "build" "job-applications/globex" "--date" "2026-09-22"
+    Then it succeeds
+    And "job-applications/globex/build/src/globex.letter/myst.yml" contains "date: '2026-09-22'"
+    And typst was asked for the creation time 1790035200
+
+  Scenario: Without --date the doc gets no date of pubdoc's
+    When I run pubdoc "build" "job-applications/globex"
+    Then it succeeds
+    And "job-applications/globex/build/src/globex.letter/myst.yml" does not contain "date:"
+
+  Scenario: --date must be a date
+    When I run pubdoc "build" "job-applications/globex" "--date" "yesterday"
+    Then the exit code is 2
+    And stderr mentions "--date yesterday is not a date"
