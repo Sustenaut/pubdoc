@@ -1,4 +1,0 @@
-{
-  "category": "changed",
-  "change": "pubdoc renders with the fonts it carries alone (typst --ignore-system-fonts and pubdoc's fonts/: DejaVu Sans, Ubuntu Regular and Liberation Sans, beside typst's own), so a render no longer changes with the fonts a machine has installed"
-}
