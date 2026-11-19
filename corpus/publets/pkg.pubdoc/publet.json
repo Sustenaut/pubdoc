@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubdoc 0.2.1 is released as v0.2.1 from commit a8c9f27fa0930e67928fd1c734810500c6d5b17e.",
+      "content": "pubdoc 0.3.0 is released as v0.3.0 from commit 17f6eba62ee684690c4e8f54ef1ee7f0e0e8387c.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubdoc",
-            "0.2.1",
+            "0.3.0",
             "",
             "",
-            "v0.2.1",
-            "a8c9f27fa0930e67928fd1c734810500c6d5b17e"
+            "v0.3.0",
+            "17f6eba62ee684690c4e8f54ef1ee7f0e0e8387c"
           ]
         ]
       },
-      "scope": "the published release v0.2.1 of pubdoc",
+      "scope": "the published release v0.3.0 of pubdoc",
       "sources": [
         {
           "ref": "pubdoc",
-          "revision": "a8c9f27fa0930e67928fd1c734810500c6d5b17e"
+          "revision": "17f6eba62ee684690c4e8f54ef1ee7f0e0e8387c"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubdoc 0.2.1 was released on 2026-11-19 from commit a8c9f27fa0930e67928fd1c734810500c6d5b17e with these changes.",
+      "content": "pubdoc 0.3.0 was released on 2026-11-19 from commit 17f6eba62ee684690c4e8f54ef1ee7f0e0e8387c with these changes.",
       "data": {
         "columns": [
           {
@@ -57,19 +57,23 @@
         ],
         "rows": [
           [
+            "changed",
+            "pubdoc approve signs a version instead of copying a PDF into versions/: it builds every layout of each variant (each PDF stamped with the approval date, so a rebuild is the same bytes), uploads the renders to the project's storage tenant, has pub 0.4 sign a version publet (lineage doc.<project>.<doc>.<variant>) in the repository's corpus, and records it in <doc>/versions/versions.yml; it refuses uncommitted changes and anyone roles.reviewers does not name, and prints the shown render's address last for review-builder"
+          ],
+          [
             "added",
-            "a layout's template may be a template directory of the repository: a value holding a / is a path relative to the project's directory (./templates/mine, ../templates/mine); pubdoc check refuses one outside the repository, missing, without template.yml or not kind: typst, and build points the export at it"
+            "pubdoc versions, fetch (a render, checked by its sha256), verify (versions.yml against the corpus's signed publets, with --remote the renders in storage) and compare (two PDFs: pages, text, pixels); storage and corpus settings in project.yml or a repository-wide pubdoc.yml, checked by pubdoc check"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.2.1 of pubdoc",
+      "scope": "the published release v0.3.0 of pubdoc",
       "sources": [
         {
           "ref": "pubdoc",
-          "revision": "a8c9f27fa0930e67928fd1c734810500c6d5b17e"
+          "revision": "17f6eba62ee684690c4e8f54ef1ee7f0e0e8387c"
         }
       ]
     }
