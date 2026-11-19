@@ -246,7 +246,17 @@ def doc_files(doc: Doc) -> dict[Path, bytes]:
     return wanted
 
 
-def myst_config(doc: Doc, root: Path, toc: list[Path], renders: list[Render]) -> bytes:
+def fonts() -> Path:
+    """The fonts pubdoc carries (fonts/README.md): typst sees these alone."""
+    return Path(str(resources.files("pubdoc") / "fonts"))
+
+
+def typst_fonts() -> list[str]:
+    return ["--ignore-system-fonts", "--font-path", str(fonts())]
+
+
+def myst_config(doc: Doc, root: Path, toc: list[Path], renders: list[Render],
+                date: str | None = None) -> bytes:
     """A myst.yml in `root` whose table of contents is `toc` and which
     exports each render. An export through the table of contents, not one
     naming its `article:`, nests a part's headings under its title (# is a
@@ -262,14 +272,16 @@ def myst_config(doc: Doc, root: Path, toc: list[Path], renders: list[Render]) ->
                              else str(Path(templates) / r.spec["template"])),
                 "output": os.path.relpath(r.typst_source, root)}
                for r in renders]
-    myst = {"version": 1,
-            "project": {"plugins": plugins, "toc": [{"file": str(f)} for f in toc], "exports": exports},
-            "site": {"nav": []}}
+    project = {"plugins": plugins, "toc": [{"file": str(f)} for f in toc], "exports": exports}
+    if date:
+        # The doc's date, which a template prints, unless a part sets its own.
+        project["date"] = date
+    myst = {"version": 1, "project": project, "site": {"nav": []}}
     return ("# Written by pubdoc from project.yml: do not edit.\n"
             + yaml.safe_dump(myst, sort_keys=False)).encode()
 
 
-def stage(doc: Doc, renders: list[Render]) -> dict[Path, list[Render]]:
+def stage(doc: Doc, renders: list[Render], date: str | None = None) -> dict[Path, list[Render]]:
     """Stage one MyST project per part file the Typst renders use, in
     build/src/<file>/, each holding the doc's files and its shared parts and
     a myst.yml whose table of contents is that one file. Curvenote builds a
@@ -287,7 +299,7 @@ def stage(doc: Doc, renders: list[Render]) -> dict[Path, list[Render]]:
         name = Path(".".join(article.with_suffix("").parts))
         for rel, data in files.items():
             wanted[name / rel] = data
-        wanted[name / "myst.yml"] = myst_config(doc, src / name, [article], group)
+        wanted[name / "myst.yml"] = myst_config(doc, src / name, [article], group, date)
         staged[src / name] = group
     mirror(wanted, src)
     return staged
@@ -309,7 +321,7 @@ def prepare(doc: Doc) -> Path:
 
 
 def build(doc: Doc, typst: str, variant: str | None = None, layout: str | None = None,
-          timestamp: int | None = None) -> str | None:
+          timestamp: int | None = None, date: str | None = None) -> str | None:
     """Build every render of `doc`, or those named: None when all were
     built, else why one was not. With `timestamp`, each PDF says it was made
     then, so the same sources and tools make the same bytes."""
@@ -317,13 +329,13 @@ def build(doc: Doc, typst: str, variant: str | None = None, layout: str | None =
     if not renders:
         return f"{doc.label} has nothing to build for {variant or 'any variant'} and {layout or 'any layout'}"
     templates = prepare(doc)
-    for src, group in stage(doc, renders).items():
+    for src, group in stage(doc, renders, date).items():
         if subprocess.call(curvenote("build", "--typst"), cwd=src) != 0:
             return f"curvenote build failed for {doc.label}"
         for r in group:
             typ = r.typst_source
             stamp = ["--creation-timestamp", str(timestamp)] if timestamp is not None else []
-            if subprocess.call([typst, "compile", *stamp, str(typ), str(r.output)]) != 0:
+            if subprocess.call([typst, "compile", *typst_fonts(), *stamp, str(typ), str(r.output)]) != 0:
                 return f"typst compile failed for {typ}"
             print(f"built {projects.shown(r.output)}")
     for r in renders:
@@ -348,8 +360,14 @@ def cmd_build(args: argparse.Namespace) -> int:
     if (args.variant or args.layout) and len(docs) != 1:
         die("--variant and --layout need one doc")
     typst = resolve_typst()
+    timestamp = None
+    if args.date:
+        try:
+            timestamp = versions.Approval("", args.date, "", "", "").timestamp
+        except ValueError:
+            die(f"--date {args.date} is not a date, YYYY-MM-DD", 2)
     for doc in docs:
-        if failure := build(doc, typst, args.variant, args.layout):
+        if failure := build(doc, typst, args.variant, args.layout, timestamp=timestamp, date=args.date):
             die(failure)
     return 0
 
@@ -471,7 +489,7 @@ def cmd_approve(args: argparse.Namespace) -> int:
     shown = None
     for v in variants:
         renders = doc.renders(v)
-        if failure := build(doc, typst, v, timestamp=approval.timestamp):
+        if failure := build(doc, typst, v, timestamp=approval.timestamp, date=approval.date):
             die(failure)
         try:
             entry = versions.publish(doc, v, approval, renders, doc_files(doc))
@@ -728,7 +746,9 @@ def parser() -> argparse.ArgumentParser:
         ("name", {"nargs": "?", "help": "a doc, <project>/<doc>, or a project"}),
         ("--all", {"action": "store_true", "help": "every doc of every project in this repository"}),
         ("--variant", {"help": "only this variant"}),
-        ("--layout", {"help": "only this layout"}))
+        ("--layout", {"help": "only this layout"}),
+        ("--date", {"help": "the doc's date, YYYY-MM-DD, as approve gives it: printed by the template "
+                    "unless a part sets its own, and the PDFs' creation time"}))
     add("preview", cmd_preview, "review-builder's watch, build and Accept loop over one PDF render",
         doc, variant, layout, port)
     add("approve", cmd_approve, "build each variant of a doc, upload its renders to storage, sign a version "

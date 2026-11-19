@@ -25,7 +25,7 @@ pubdoc = "pubdoc.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-pubdoc = ["templates/*", "templates/*/*", "schema/*"]
+pubdoc = ["templates/*", "templates/*/*", "schema/*", "fonts/*"]
 
 # `make functional` measures the suite, the `pubdoc` processes it starts
 # included, into coverage/coverage.xml for SonarQube Cloud.
