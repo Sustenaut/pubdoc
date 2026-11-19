@@ -69,22 +69,35 @@ def config_file(root: Path, project: projects.Project | None) -> Path:
     return root / settings.ROOT_FILE
 
 
-def inside(root: Path, file: Path) -> Path:
+def inside(root: Path, file: Path) -> str:
     """`file`, resolved, refused unless it lies in the repository at `root`:
-    corpus init writes nothing anywhere else."""
+    corpus init writes nothing anywhere else, and reads and writes the path
+    this returns, never the one it was given."""
     base = os.path.realpath(root)
     target = os.path.realpath(file)
-    if os.path.commonpath([base, target]) != base:
+    if not target.startswith(base + os.sep):
         raise CorpusError(f"{file} is outside the repository at {root}; nothing written")
-    return Path(target)
+    return target
+
+
+def _read(target: str) -> str:
+    if not os.path.isfile(target):
+        return ""
+    with open(target, encoding="utf-8") as f:
+        return f.read()
+
+
+def _write(target: str, text: str) -> None:
+    with open(target, "w", encoding="utf-8") as f:
+        f.write(text)
 
 
 def write_key(root: Path, file: Path, corpus_path: str, key: str) -> None:
     """Name `key` as corpus.key in `file`, keeping its other lines (comments
     included): a `corpus:` line in flow style gains or changes its key; a
     file without one gains one."""
-    file = inside(root, file)
-    text = file.read_text(encoding="utf-8") if file.is_file() else ""
+    target = inside(root, file)
+    text = _read(target)
     lines = text.splitlines()
     for i, line in enumerate(lines):
         if line.startswith("corpus:"):
@@ -97,23 +110,23 @@ def write_key(root: Path, file: Path, corpus_path: str, key: str) -> None:
             break
     else:
         lines.append(f"corpus: {{path: {corpus_path}, key: {key}}}")
-    file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    _write(target, "\n".join(lines) + "\n")
 
 
 def declare(root: Path, key_path: str, name: str | None, project_id: str | None) -> str | None:
     """The Bitwarden name pubrules.json's signing_keys gives the key at
     `key_path`, declaring it when it is not declared yet."""
     rules = inside(root, root / RULES)
-    if not rules.is_file():
+    if not os.path.isfile(rules):
         return None
-    config = json.loads(rules.read_text(encoding="utf-8"))
+    text = _read(rules)
+    config = json.loads(text)
     for entry in config.get("signing_keys") or []:
         if entry.get("path") == key_path:
             return entry["bitwarden"]["name"]
     if not (name and project_id):
         raise CorpusError(f"{RULES} does not declare {key_path} in signing_keys: give --bitwarden-project "
                           "(the Bitwarden project's id) and --backup-name (the secret's name) to declare it")
-    text = rules.read_text(encoding="utf-8")
     entry = json.dumps({"path": key_path, "bitwarden": {"project": {"id": project_id}, "name": name}})
     if '"signing_keys": [' in text:
         text = text.replace('"signing_keys": [', f'"signing_keys": [\n    {entry},', 1)
@@ -121,19 +134,19 @@ def declare(root: Path, key_path: str, name: str | None, project_id: str | None)
         config["signing_keys"] = [json.loads(entry)]
         text = json.dumps(config, indent=2) + "\n"
     json.loads(text)  # still JSON
-    rules.write_text(text, encoding="utf-8")
+    _write(rules, text)
     return name
 
 
 def ignore(root: Path, store: str) -> bool:
     gitignore = inside(root, root / ".gitignore")
-    text = gitignore.read_text(encoding="utf-8") if gitignore.is_file() else ""
+    text = _read(gitignore)
     line = f"/{store}/"
     if line in text.splitlines():
         return False
     gap = "" if not text or text.endswith("\n") else "\n"
-    gitignore.write_text(f"{text}{gap}# A corpus's signing key and store: only on the approver's machine.\n"
-                         f"{line}\n", encoding="utf-8")
+    _write(gitignore, f"{text}{gap}# A corpus's signing key and store: only on the approver's machine.\n"
+                      f"{line}\n")
     return True
 
 
@@ -158,7 +171,8 @@ def init(project: projects.Project | None, root: Path, backup_name: str | None,
          bitwarden_project: str | None, backup: bool) -> list[str]:
     """Make or complete the corpus; what was done, line by line."""
     conf = settings.of(project) if project else root_settings(root)
-    corpus, trusted = conf.corpus, conf.key
+    # The corpus is made, and pub run in it, only inside the repository.
+    corpus, trusted = Path(inside(root, conf.corpus)), conf.key
     key_file = corpus / STORE / KEY_FILE
     key_path = os.path.relpath(key_file, root)
     file = config_file(root, project)

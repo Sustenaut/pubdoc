@@ -79,3 +79,13 @@ Feature: pubdoc corpus init makes the corpus versions are signed in, once
     And "job-applications/project.yml" contains "corpus: {path: corpus, key: pub:sha2-256:"
     And ".gitignore" contains "/job-applications/corpus/.publet/"
     And "pubrules.json" contains "job-applications/corpus/.publet/signing.key"
+
+  Scenario: A corpus path that escapes the repository is refused, and nothing is written
+    Given in "job-applications/project.yml" "publish:" becomes "corpus: {path: ../../outside}\npublish:"
+    When I run pubdoc "corpus" "init" "job-applications" "--bitwarden-project" "11111111-2222-3333-4444-555555555555" "--backup-name" "pub-signing-key-applications"
+    Then the exit code is 1
+    And stderr mentions "is outside the repository"
+    And "../outside" does not exist
+    And "job-applications/project.yml" does not contain "key:"
+    And "pubrules.json" does not contain "signing_keys"
+    And ".gitignore" does not exist
