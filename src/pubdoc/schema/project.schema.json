@@ -78,9 +78,28 @@
       "type": "array",
       "description": "Where rendered layouts go, and who may read them there.",
       "items": {"$ref": "#/$defs/publication"}
-    }
+    },
+    "storage": {"$ref": "#/$defs/storage"},
+    "corpus": {"$ref": "#/$defs/corpus", "description": "The corpus that signs this project's version publets, its path relative to the project's directory. The repository's pubdoc.yml gives the default."}
   },
   "$defs": {
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Where approved renders are stored. The repository's pubdoc.yml gives the default.",
+      "properties": {
+        "tenant": {"$ref": "#/$defs/name", "description": "The storage tenant approved renders go to."},
+        "url": {"type": "string", "pattern": "^https?://[^/]+$", "description": "Storage's address; https://storage.sustenaut.eu by default."}
+      }
+    },
+    "corpus": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "key": {"type": "string", "pattern": "^pub:sha2-256:[a-z2-7]+$", "description": "The corpus's signing key: the one verify trusts."}
+      }
+    },
     "name": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
     "names": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/name"}},
     "logins": {

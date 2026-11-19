@@ -243,7 +243,7 @@ def read_yaml(path: Path, problems: list[Problem]) -> dict | None:
 def validators() -> dict[str, Draft202012Validator]:
     schemas = {name: json.loads((resources.files("pubdoc") / "schema" / f"{name}.schema.json")
                                 .read_text(encoding="utf-8"))
-               for name in ("project", "doc")}
+               for name in ("project", "doc", "pubdoc")}
     store = Registry().with_resources(
         (schema["$id"], Resource.from_contents(schema)) for schema in schemas.values())
     return {name: Draft202012Validator(schema, registry=store) for name, schema in schemas.items()}

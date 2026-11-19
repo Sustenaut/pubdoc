@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "pubdoc versions, fetch (a render, checked by its sha256), verify (versions.yml against the corpus's signed publets, with --remote the renders in storage) and compare (two PDFs: pages, text, pixels); storage and corpus settings in project.yml or a repository-wide pubdoc.yml, checked by pubdoc check"
+}

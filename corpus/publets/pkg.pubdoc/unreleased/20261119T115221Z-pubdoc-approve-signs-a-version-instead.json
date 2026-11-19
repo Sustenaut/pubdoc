@@ -1,0 +1,4 @@
+{
+  "category": "changed",
+  "change": "pubdoc approve signs a version instead of copying a PDF into versions/: it builds every layout of each variant (each PDF stamped with the approval date, so a rebuild is the same bytes), uploads the renders to the project's storage tenant, has pub 0.4 sign a version publet (lineage doc.<project>.<doc>.<variant>) in the repository's corpus, and records it in <doc>/versions/versions.yml; it refuses uncommitted changes and anyone roles.reviewers does not name, and prints the shown render's address last for review-builder"
+}

@@ -129,13 +129,10 @@ or any above it: the `{pub}` plugin stops at load without one.
 
 ### Preview and approve
 
-`preview` and `approve` act on one PDF render: a variant and a template
-layout, which can be left out when the doc has only one. review-builder
-reads `review-builder.yaml` from its working directory and serves only
-files inside it (`SimpleHTTPRequestHandler(directory=root)`, which 404s on
-any `../` path no matter what `commit_cmd` prints), so the built PDF and
-the approved copy its Accept button links to must both be inside that
-directory. `preview` therefore writes `<doc>/build/review-builder.yaml`
+`preview` acts on one PDF render: a variant and a template layout, which
+can be left out when the doc has only one. review-builder reads
+`review-builder.yaml` from its working directory and serves only files
+inside it, so `preview` writes `<doc>/build/review-builder.yaml`
 (generated, inside the ignored `build/`) with:
 
 - `build_cmd`: this pubdoc (`python -m pubdoc`, the interpreter running
@@ -144,15 +141,72 @@ directory. `preview` therefore writes `<doc>/build/review-builder.yaml`
 - `pdf_path`: `<variant>/<layout>.pdf`;
 - `watched_files`: the doc's and its shared parts' `.md`, `.yml` and
   `.bib` files and `project.yml`;
-- `commit_cmd`: `approve` of that render;
+- `commit_cmd`: `approve` of that variant, `--show <layout>`, so the last
+  line it prints, which the Accept button links to, is that render's
+  address in storage;
 - `preview_dirname`: `preview/<variant>/<layout>`, so previews of two
   renders of one doc do not share state;
 
-and links `build/versions` to `../versions`. `approve` copies the PDF to
-`<doc>/versions/<doc>_<variant>_<layout>_<date>.pdf` and prints
-`versions/<file>`, which is right relative to both the doc and `build/`.
-Committed dated PDFs are the version record for now; a later step makes
-an approval a publet, with the renders in storage.
+### Versions as publets
+
+Settled on 2026-11-19 (step 4 of the document-projects plan): a version is
+a signed publet in git, its renders in storage.
+
+- **One corpus per repository**, `corpus/` by default, as pubrel keeps a
+  package's: `corpus.json`, the publet sources in `publets/`, the signed
+  objects in `objects/` (committed) and the key in `.publet/` (never
+  committed, on the approver's machine). A project that needs its own key
+  names its own corpus (`corpus: {path: corpus}` in its project.yml):
+  publet's design project does, so its documents are not signed with the
+  key that signs publet's releases.
+- **One lineage per doc and variant**: approving publishes the next
+  version of `doc.<project>.<doc>.<variant>`, and pub records that it
+  supersedes the last. Its Section 9.1 tag is made once, from the doc's and
+  variant's names (`DOC-ACMERE-11-2026`), else from a hash of the slug
+  where those letters are taken, and kept in its source.
+- **Renders are outputs, not publets** (David's rule of 2026-09-30): the
+  `#renders` claim holds each one's SHA-256, size and address, never the
+  file. Storage names a file by its SHA-256, so an address cannot come to
+  mean another file, and the same render is never stored twice.
+- **Reproducible renders.** A PDF records when it was made, so two builds
+  seconds apart differ. approve has typst stamp each PDF with the approval
+  date (`--creation-timestamp`, midnight UTC): the same sources and tools
+  then make the same bytes. A PDF approved before this cannot be rebuilt
+  byte for byte, so `compare` checks what a reader sees: pages, text and
+  pixels.
+- **Driving pub.** pubdoc writes the publet's source and runs `pub build`
+  and `pub publish <slug>` in the corpus, as pubrel does, and reads what it
+  published from `corpus.lock`. It refuses any pub but 0.4.
+- **Verifying without the key.** pub checks a corpus's signatures when it
+  loads it as a parent, and needs no key store for that. verify writes a
+  scratch corpus naming the real one as its parent and runs `pub corpus
+  status` there: every generation record must be signed by the corpus's
+  key and every object must hash to its name. It then reads each version's
+  `#identity` and `#renders` (`pub read --dir=objects`) and compares them
+  with versions.yml, and checks the corpus's key against `corpus.key`
+  where the repository names one.
+- **Upload, then sign.** approve uploads the renders before pub publishes
+  the version, so a publet never names a render storage does not hold. A
+  publish that fails after the upload leaves renders no version names:
+  harmless, since storage keeps each file once by its checksum, and the
+  next approve's upload of the same bytes finds it there.
+- **What verify trusts.** The corpus is the one the project's settings
+  name, never the one a versions.yml names (a versions.yml naming another
+  is an error), and its key is `corpus.key`'s where the repository sets
+  one; otherwise verify says which key signed and accepts it. The newest
+  version of each variant in versions.yml must be the lineage's head in
+  `corpus.lock`, so a version left out of the index shows. Each version's
+  `#sources` are hashed against `git show <commit>:<path>`, so one approved
+  with `--allow-dirty` changes shows; a commit a shallow clone lacks is a
+  note.
+- **The token stays with the tenant.** fetch and verify --remote take
+  render addresses from versions.yml and the `#renders` claim, so the
+  storage token goes only to an address under the project's tenant (same
+  scheme, host and port, no user, no `.` or `..` segments), and a redirect
+  is not followed; any other address is refused, unfetched.
+- **Reviewers.** Running approve is the approval until auth.sustenaut.eu
+  sign-off (step 5); when the project names `roles.reviewers`, only they
+  may run it.
 
 `open <project>/<doc>` stages the doc the same way and runs `curvenote
 start` in `build/src/`, a live site of the MyST sources themselves.

@@ -1,9 +1,7 @@
-Feature: pubdoc lists projects, and previews and approves one PDF render
+Feature: pubdoc lists projects, and previews one PDF render
   `list` names each project and its docs. `preview` writes review-builder's
-  configuration for one render into the doc's build/ and runs it there;
-  `approve`, which its Accept button runs, copies that render's PDF into
-  the doc's versions/, dated, and prints that path, which build/versions
-  (a link to it) makes reachable from the preview.
+  configuration for one render into the doc's build/ and runs it there; its
+  Accept button runs `approve` (versions.feature).
 
   Background:
     Given the example project
@@ -37,34 +35,15 @@ Feature: pubdoc lists projects, and previews and approves one PDF render
     Then the exit code is 1
     And stderr mentions "job-applications is a project; name one of its docs: job-applications/acme, job-applications/globex"
 
-  Scenario: approve copies one render into the doc's versions/
-    Given "job-applications/acme/build/research/cv-pdf.pdf" is built
-    When I run pubdoc "approve" "job-applications/acme" "research" "cv-pdf"
-    Then it succeeds
-    And it prints today's "versions/acme_research_cv-pdf" PDF
-    And today's "job-applications/acme/versions/acme_research_cv-pdf" PDF exists
-
-  Scenario: A doc's only PDF render needs no naming
-    Given the file "job-applications/globex/doc.yml" reads "{variants: [engineering], layouts: [cv-pdf]}"
-    And "job-applications/globex/build/engineering/cv-pdf.pdf" is built
-    When I run pubdoc "approve" "job-applications/globex"
-    Then it succeeds
-    And today's "job-applications/globex/versions/globex_engineering_cv-pdf" PDF exists
-
-  Scenario: With several PDF renders, approve says which there are
-    When I run pubdoc "approve" "job-applications/globex"
+  Scenario: With several PDF renders, preview says which there are
+    When I run pubdoc "preview" "job-applications/globex"
     Then the exit code is 1
     And stderr mentions "job-applications/globex has 2 PDF renders (engineering cv-pdf, engineering letter-pdf); name the variant and layout"
 
   Scenario: A render the doc does not have is refused
-    When I run pubdoc "approve" "job-applications/globex" "research" "cv-pdf"
+    When I run pubdoc "preview" "job-applications/globex" "research" "cv-pdf"
     Then the exit code is 1
     And stderr mentions "job-applications/globex has no PDF layout for research and cv-pdf"
-
-  Scenario: approve needs a built PDF
-    When I run pubdoc "approve" "job-applications/acme" "research" "cv-pdf"
-    Then the exit code is 1
-    And stderr mentions "job-applications/acme/build/research/cv-pdf.pdf not built yet"
 
   Scenario: preview runs review-builder in the doc's build/, on the port given
     When I run pubdoc "preview" "job-applications/globex" "engineering" "cv-pdf" "--port" "9000"
@@ -75,4 +54,3 @@ Feature: pubdoc lists projects, and previews and approves one PDF render
     And "job-applications/globex/build/review-builder.yaml" contains "- ../../shared/base-cv/cv.md"
     And "job-applications/globex/build/review-builder.yaml" contains "- ../../project.yml"
     And "job-applications/globex/build/review-builder.yaml" contains "- approve"
-    And "job-applications/globex/build/versions" links to "../versions"

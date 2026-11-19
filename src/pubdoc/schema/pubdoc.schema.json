@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Sustenaut/pubdoc/blob/main/src/pubdoc/schema/pubdoc.schema.json",
+  "title": "pubdoc pubdoc.yml",
+  "description": "Defaults for every project in a repository, at its root: the storage tenant approved renders go to, and the corpus (path relative to the root) that signs version publets. A project's own project.yml overrides each.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "storage": {
+      "$ref": "project.schema.json#/$defs/storage"
+    },
+    "corpus": {
+      "$ref": "project.schema.json#/$defs/corpus"
+    }
+  }
+}
