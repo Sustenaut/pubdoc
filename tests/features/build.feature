@@ -1,6 +1,8 @@
 Feature: pubdoc builds every variant and layout of a doc
   `build` stages a doc's parts, and the shared parts they start from, in
-  the doc's build/src/, writes the MyST configuration for each Typst layout
+  the doc's build/src/, one MyST project per part file the Typst layouts
+  use, each with that file as its table of contents and the configuration
+  for its layouts
   there from project.yml, runs the pinned Curvenote in it, compiles each
   export to build/<variant>/<layout>.pdf, and runs each exporter layout.
   build/ ignores itself. Stand-ins for npx and typst record what they were
@@ -12,11 +14,12 @@ Feature: pubdoc builds every variant and layout of a doc
   Scenario: build makes every variant x layout of a doc
     When I run pubdoc "build" "job-applications/acme"
     Then it succeeds
-    And npx was run in "job-applications/acme/build/src" with "--yes curvenote@0.17.2 build --typst"
-    And typst compiled "job-applications/acme/build/engineering/letter-pdf.typ" to "job-applications/acme/build/engineering/letter-pdf.pdf"
-    And typst compiled "job-applications/acme/build/engineering/cv-pdf.typ" to "job-applications/acme/build/engineering/cv-pdf.pdf"
-    And typst compiled "job-applications/acme/build/research/letter-pdf.typ" to "job-applications/acme/build/research/letter-pdf.pdf"
-    And typst compiled "job-applications/acme/build/research/cv-pdf.typ" to "job-applications/acme/build/research/cv-pdf.pdf"
+    And npx was run in "job-applications/acme/build/src/acme.letter" with "--yes curvenote@0.17.2 build --typst"
+    And npx was run in "job-applications/acme/build/src/shared.base-cv.cv.research" with "--yes curvenote@0.17.2 build --typst"
+    And typst compiled "job-applications/acme/build/engineering/letter-pdf/main.typ" to "job-applications/acme/build/engineering/letter-pdf.pdf"
+    And typst compiled "job-applications/acme/build/engineering/cv-pdf/main.typ" to "job-applications/acme/build/engineering/cv-pdf.pdf"
+    And typst compiled "job-applications/acme/build/research/letter-pdf/main.typ" to "job-applications/acme/build/research/letter-pdf.pdf"
+    And typst compiled "job-applications/acme/build/research/cv-pdf/main.typ" to "job-applications/acme/build/research/cv-pdf.pdf"
     And it prints "built job-applications/acme/build/research/cv-linkedin.txt"
     And "job-applications/acme/build/research/cv-linkedin.txt" contains "Python"
     And "job-applications/acme/build/.gitignore" contains "*"
@@ -25,14 +28,14 @@ Feature: pubdoc builds every variant and layout of a doc
   Scenario: Each variant takes its own override, the doc's part, or the shared part, in that order
     When I run pubdoc "build" "job-applications/acme"
     Then it succeeds
-    And "job-applications/acme/build/src/myst.yml" contains "article: acme/letter.md"
-    And "job-applications/acme/build/src/myst.yml" contains "article: acme/letter.research.md"
-    And "job-applications/acme/build/src/myst.yml" contains "article: shared/base-cv/cv.md"
-    And "job-applications/acme/build/src/myst.yml" contains "article: shared/base-cv/cv.research.md"
-    And "job-applications/acme/build/src/myst.yml" contains "template: ../templates/cv-sidebar"
-    And "job-applications/acme/build/src/myst.yml" contains "output: ../research/cv-pdf.typ"
-    And "job-applications/acme/build/src/myst.yml" contains "../templates/pub-plugin.mjs"
-    And "job-applications/acme/build/src/shared/base-cv/cv.md" exists
+    And "job-applications/acme/build/src/acme.letter/myst.yml" contains "file: acme/letter.md"
+    And "job-applications/acme/build/src/acme.letter.research/myst.yml" contains "file: acme/letter.research.md"
+    And "job-applications/acme/build/src/shared.base-cv.cv/myst.yml" contains "file: shared/base-cv/cv.md"
+    And "job-applications/acme/build/src/shared.base-cv.cv.research/myst.yml" contains "file: shared/base-cv/cv.research.md"
+    And "job-applications/acme/build/src/shared.base-cv.cv.research/myst.yml" contains "template: ../../templates/cv-sidebar"
+    And "job-applications/acme/build/src/shared.base-cv.cv.research/myst.yml" contains "output: ../../research/cv-pdf/main.typ"
+    And "job-applications/acme/build/src/shared.base-cv.cv.research/myst.yml" contains "../../templates/pub-plugin.mjs"
+    And "job-applications/acme/build/src/shared.base-cv.cv/shared/base-cv/cv.md" exists
 
   Scenario: A doc's own part replaces the shared one, and can include it
     Given the file "job-applications/acme/cv.md" reads:
@@ -42,28 +45,28 @@ Feature: pubdoc builds every variant and layout of a doc
       """
     When I run pubdoc "build" "job-applications/acme"
     Then it succeeds
-    And "job-applications/acme/build/src/myst.yml" contains "article: acme/cv.md"
-    And "job-applications/acme/build/src/myst.yml" does not contain "article: shared/base-cv/cv.md"
-    And "job-applications/acme/build/src/acme/cv.md" contains "../shared/base-cv/cv.md"
-    And "job-applications/acme/build/src/shared/base-cv/cv.md" exists
+    And "job-applications/acme/build/src/acme.cv/myst.yml" contains "file: acme/cv.md"
+    And "job-applications/acme/build/src/shared.base-cv.cv" does not exist
+    And "job-applications/acme/build/src/acme.cv/acme/cv.md" contains "../shared/base-cv/cv.md"
+    And "job-applications/acme/build/src/acme.cv/shared/base-cv/cv.md" exists
 
   Scenario: A doc.yml that narrows builds only what it keeps
     When I run pubdoc "build" "job-applications/globex"
     Then it succeeds
-    And typst compiled "job-applications/globex/build/engineering/cv-pdf.typ" to "job-applications/globex/build/engineering/cv-pdf.pdf"
+    And typst compiled "job-applications/globex/build/engineering/cv-pdf/main.typ" to "job-applications/globex/build/engineering/cv-pdf.pdf"
     And "job-applications/globex/build/research" does not exist
     And "job-applications/globex/build/engineering/cv-linkedin.txt" does not exist
 
   Scenario: A project builds each of its docs
     When I run pubdoc "build" "job-applications"
     Then it succeeds
-    And typst compiled "job-applications/acme/build/research/cv-pdf.typ" to "job-applications/acme/build/research/cv-pdf.pdf"
-    And typst compiled "job-applications/globex/build/engineering/letter-pdf.typ" to "job-applications/globex/build/engineering/letter-pdf.pdf"
+    And typst compiled "job-applications/acme/build/research/cv-pdf/main.typ" to "job-applications/acme/build/research/cv-pdf.pdf"
+    And typst compiled "job-applications/globex/build/engineering/letter-pdf/main.typ" to "job-applications/globex/build/engineering/letter-pdf.pdf"
 
   Scenario: --variant and --layout build one render, as a preview does
     When I run pubdoc "build" "job-applications/acme" "--variant" "research" "--layout" "cv-pdf"
     Then it succeeds
-    And typst compiled "job-applications/acme/build/research/cv-pdf.typ" to "job-applications/acme/build/research/cv-pdf.pdf"
+    And typst compiled "job-applications/acme/build/research/cv-pdf/main.typ" to "job-applications/acme/build/research/cv-pdf.pdf"
     And typst compiled only once
     And "job-applications/acme/build/research/cv-linkedin.txt" does not exist
 
@@ -71,20 +74,20 @@ Feature: pubdoc builds every variant and layout of a doc
     Given in "job-applications/project.yml" "  cv-linkedin:" becomes "  webpage-pdf: {part: webpage, template: lapreprint-typst, format: pdf}\n  cv-linkedin:"
     When I run pubdoc "build" "job-applications/acme"
     Then it succeeds
-    And "job-applications/acme/build/src/myst.yml" does not contain "webpage"
+    And "job-applications/acme/build/src/acme.webpage" does not exist
 
   Scenario: build runs from anywhere, given the doc's path
     When I run pubdoc "build" "../acme" in "job-applications/globex"
     Then it succeeds
-    And typst compiled "job-applications/acme/build/research/cv-pdf.typ" to "job-applications/acme/build/research/cv-pdf.pdf"
+    And typst compiled "job-applications/acme/build/research/cv-pdf/main.typ" to "job-applications/acme/build/research/cv-pdf.pdf"
 
   Scenario: build removes what this build did not write
-    Given the file "job-applications/acme/build/templates/old.typ" reads "stale"
-    And the file "job-applications/acme/build/src/acme/old.md" reads "stale"
+    Given the file "job-applications/acme/build/templates/old/main.typ" reads "stale"
+    And the file "job-applications/acme/build/src/acme.letter/acme/old.md" reads "stale"
     When I run pubdoc "build" "job-applications/acme"
     Then it succeeds
-    And "job-applications/acme/build/templates/old.typ" does not exist
-    And "job-applications/acme/build/src/acme/old.md" does not exist
+    And "job-applications/acme/build/templates/old/main.typ" does not exist
+    And "job-applications/acme/build/src/acme.letter/acme/old.md" does not exist
 
   Scenario: Without publets-local.json the {pub} plugin is left out
     Given the file "publets-local.json" is gone
@@ -92,8 +95,8 @@ Feature: pubdoc builds every variant and layout of a doc
     And in "job-applications/project.yml" "letter-pdf, cv-pdf, cv-linkedin]" becomes "letter-pdf, cv-pdf]"
     When I run pubdoc "build" "job-applications/acme"
     Then it succeeds
-    And "job-applications/acme/build/src/myst.yml" does not contain "pub-plugin"
-    And "job-applications/acme/build/src/myst.yml" contains "annotations.mjs"
+    And "job-applications/acme/build/src/acme.letter/myst.yml" does not contain "pub-plugin"
+    And "job-applications/acme/build/src/acme.letter/myst.yml" contains "annotations.mjs"
 
   Scenario: build refuses a project that does not check
     Given in "job-applications/project.yml" "{part: letter," becomes "{part: lettr,"
@@ -130,10 +133,10 @@ Feature: pubdoc builds every variant and layout of a doc
     And it prints "built 2 of 2 docs"
 
   Scenario: build --all goes on past a failing doc, reports each, and fails
-    Given typst fails on "job-applications/acme/build/engineering/letter-pdf.typ"
+    Given typst fails on "job-applications/acme/build/engineering/letter-pdf/main.typ"
     When I run pubdoc "build" "--all"
     Then the exit code is 1
-    And typst compiled "job-applications/globex/build/engineering/cv-pdf.typ" to "job-applications/globex/build/engineering/cv-pdf.pdf"
+    And typst compiled "job-applications/globex/build/engineering/cv-pdf/main.typ" to "job-applications/globex/build/engineering/cv-pdf.pdf"
     And stderr mentions "typst compile failed for"
     And it prints "built 1 of 2 docs; failed: job-applications/acme"
 
@@ -163,4 +166,6 @@ Feature: pubdoc builds every variant and layout of a doc
   Scenario: open serves a live Curvenote site of a doc's staged parts
     When I run pubdoc "open" "job-applications/acme" "--port" "3000"
     Then it succeeds
-    And npx was run in "job-applications/acme/build/src" with "--yes curvenote@0.17.2 start --port 3000"
+    And npx was run in "job-applications/acme/build/site" with "--yes curvenote@0.17.2 start --port 3000"
+    And "job-applications/acme/build/site/myst.yml" contains "file: shared/base-cv/cv.research.md"
+    And "job-applications/acme/build/site/myst.yml" contains "file: acme/letter.md"

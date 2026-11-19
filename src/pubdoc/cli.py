@@ -221,11 +221,10 @@ def cmd_variants(args: argparse.Namespace) -> int:
     return 0
 
 
-def stage(doc: Doc, renders: list[Render]) -> Path:
-    """Copy the doc's parts, and the shared parts it starts from, into
-    build/src/ as they sit in the project, so a part's MyST include of
-    ../shared/... still resolves, and write the MyST configuration that
-    exports each Typst render there."""
+def doc_files(doc: Doc) -> dict[Path, bytes]:
+    """The doc's files and those of the shared parts it starts from, by
+    their path in the project, so a part's MyST include of ../shared/...
+    resolves the same when staged."""
     project = doc.project
     wanted: dict[Path, bytes] = {}
     sources = [doc.path] + sorted({project.shared_dir(part) for part in project.config["parts"]
@@ -240,19 +239,61 @@ def stage(doc: Doc, renders: list[Render]) -> Path:
             for f in files:
                 path = Path(here) / f
                 wanted[rel / path.relative_to(source)] = path.read_bytes()
-    plugins = [str(Path("..") / TEMPLATES / "annotations.mjs")]
+    return wanted
+
+
+def myst_config(doc: Doc, root: Path, toc: list[Path], renders: list[Render]) -> bytes:
+    """A myst.yml in `root` whose table of contents is `toc` and which
+    exports each render. An export through the table of contents, not one
+    naming its `article:`, nests a part's headings under its title (# is a
+    level-2 heading), as the templates expect."""
+    templates = os.path.relpath(doc.path / BUILD / TEMPLATES, root)
+    plugins = [str(Path(templates) / "annotations.mjs")]
     # pub-plugin.mjs needs the repository's publets-local.json, found upwards.
     if any((d / "publets-local.json").is_file() for d in [doc.path, *doc.path.parents]):
-        plugins.insert(0, str(Path("..") / TEMPLATES / "pub-plugin.mjs"))
+        plugins.insert(0, str(Path(templates) / "pub-plugin.mjs"))
     exports = [{"format": "typst",
-                "article": str(r.source.relative_to(project.path)),
-                "template": str(Path("..") / TEMPLATES / r.spec["template"]),
-                "output": str(Path("..") / r.variant / f"{r.layout}.typ")}
-               for r in renders if "template" in r.spec]
-    myst = {"version": 1, "project": {"plugins": plugins, "exports": exports}, "site": {"nav": []}}
-    wanted[Path("myst.yml")] = ("# Written by pubdoc from project.yml: do not edit.\n"
-                                + yaml.safe_dump(myst, sort_keys=False)).encode()
-    return mirror(wanted, doc.path / BUILD / SOURCES)
+                "template": str(Path(templates) / r.spec["template"]),
+                "output": os.path.relpath(r.typst_source, root)}
+               for r in renders]
+    myst = {"version": 1,
+            "project": {"plugins": plugins, "toc": [{"file": str(f)} for f in toc], "exports": exports},
+            "site": {"nav": []}}
+    return ("# Written by pubdoc from project.yml: do not edit.\n"
+            + yaml.safe_dump(myst, sort_keys=False)).encode()
+
+
+def stage(doc: Doc, renders: list[Render]) -> dict[Path, list[Render]]:
+    """Stage one MyST project per part file the Typst renders use, in
+    build/src/<file>/, each holding the doc's files and its shared parts and
+    a myst.yml whose table of contents is that one file. Curvenote builds a
+    project's exports from its table of contents, so a project per file is
+    what lets each render take its own variant of a part."""
+    files = doc_files(doc)
+    src = doc.path / BUILD / SOURCES
+    groups: dict[Path, list[Render]] = {}
+    for r in renders:
+        if "template" in r.spec:
+            groups.setdefault(r.source.relative_to(doc.project.path), []).append(r)
+    wanted: dict[Path, bytes] = {}
+    staged: dict[Path, list[Render]] = {}
+    for article, group in groups.items():
+        name = Path(".".join(article.with_suffix("").parts))
+        for rel, data in files.items():
+            wanted[name / rel] = data
+        wanted[name / "myst.yml"] = myst_config(doc, src / name, [article], group)
+        staged[src / name] = group
+    mirror(wanted, src)
+    return staged
+
+
+def stage_site(doc: Doc) -> Path:
+    """One MyST project of every part file the doc's renders use, for a live site."""
+    site = doc.path / BUILD / "site"
+    wanted = doc_files(doc)
+    toc = sorted({r.source.relative_to(doc.project.path) for r in doc.renders()})
+    wanted[Path("myst.yml")] = myst_config(doc, site, toc, [])
+    return mirror(wanted, site)
 
 
 def prepare(doc: Doc) -> Path:
@@ -268,24 +309,21 @@ def build(doc: Doc, typst: str, variant: str | None = None, layout: str | None =
     if not renders:
         return f"{doc.label} has nothing to build for {variant or 'any variant'} and {layout or 'any layout'}"
     templates = prepare(doc)
-    src = stage(doc, renders)
-    typst_renders = [r for r in renders if "template" in r.spec]
-    if typst_renders:
+    for src, group in stage(doc, renders).items():
         if subprocess.call(curvenote("build", "--typst"), cwd=src) != 0:
             return f"curvenote build failed for {doc.label}"
-        for r in typst_renders:
-            typ = r.output.with_suffix(".typ")
+        for r in group:
+            typ = r.typst_source
             if subprocess.call([typst, "compile", str(typ), str(r.output)]) != 0:
                 return f"typst compile failed for {typ}"
             print(f"built {projects.shown(r.output)}")
     for r in renders:
         if r.spec.get("exporter") == "linkedin":
             node = need("node", "install Node.js (https://nodejs.org)")
-            staged = src / r.source.relative_to(doc.project.path)
             r.output.parent.mkdir(parents=True, exist_ok=True)
             with r.output.open("w", encoding="utf-8") as out:
                 # In the doc's directory, so pub-plugin.mjs finds the repo's publets.
-                if subprocess.call([node, str(templates / "linkedin-text.mjs"), str(staged)],
+                if subprocess.call([node, str(templates / "linkedin-text.mjs"), str(r.source)],
                                    cwd=doc.path, stdout=out) != 0:
                     return f"the linkedin exporter failed for {r.source}"
             print(f"built {projects.shown(r.output)}")
@@ -336,7 +374,7 @@ def cmd_open(args: argparse.Namespace) -> int:
     doc = one_doc(args.name)
     resolve_typst()
     prepare(doc)
-    src = stage(doc, doc.renders())
+    src = stage_site(doc)
     port = ["--port", args.port] if args.port else []
     os.chdir(src)
     command = curvenote("start", *port)
