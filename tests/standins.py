@@ -38,8 +38,35 @@ def signature(key, members):
 
 args = sys.argv[1:]
 here = Path.cwd()
+
+def set_author(value):
+    (here / ".publet").mkdir(exist_ok=True)
+    (here / ".publet" / "config").write_text(f"author={value}\n")
+
 if args == ["--version"]:
     print(os.environ.get("PUBDOC_TEST_PUB_VERSION", "pub 0.4.0"))
+elif args == ["init"]:
+    set_author("pub:sha2-256:placeholder")
+elif args == ["corpus", "init"]:
+    (here / "corpus.json").write_text('{"name": "corpus", "label": "corpus", "bound": 67108864, "parents": []}\n')
+    set_author("pub:sha2-256:placeholder")
+elif args[:2] == ["sign", "--generate-key"]:
+    key = here / ".publet" / "signing.key"
+    if key.exists():
+        sys.exit(f"{key} already exists")
+    key.write_text(os.urandom(32).hex() + "\n")
+    set_author(cid(key.read_bytes()))
+    print(f"key      {cid(key.read_bytes())}")
+elif args[:2] == ["sign", "--restore-key"]:
+    key = here / ".publet" / "signing.key"
+    if not key.is_file():
+        sys.exit("nothing to restore")
+    made = cid(key.read_bytes())
+    for arg in args:
+        if arg.startswith("--expect=") and arg.split("=", 1)[1] != made:
+            sys.exit(f"the secret is the key {made}, not {arg.split('=', 1)[1]}; nothing was changed")
+    set_author(made)
+    print(f"key      {made}")
 elif args[:1] == ["build"]:
     for source in sorted(here.glob("publets/*/publet.json")):
         if "tag" not in json.loads(source.read_text()):
@@ -92,6 +119,11 @@ elif args[:2] == ["corpus", "status"]:
 else:
     sys.exit(f"the pub stand-in does not do: {' '.join(args)}")
 '''
+
+# pubsec: logs what it was asked, and backs nothing up.
+PUBSEC = """#!/bin/sh
+echo "pubsec|$PWD|$*" >> "$PUBDOC_TEST_LOG"
+"""
 
 # pdfinfo, pdftotext and pdftoppm on a "PDF" that is lines of text: each
 # line starting "page" is a page; its text is the rest of the line, and its

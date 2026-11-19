@@ -259,10 +259,25 @@ verifying need publet's `pub` 0.4 (`cargo install --locked --git
 https://github.com/Sustenaut/publet --tag v0.4.0 publet-cli`); comparing
 needs poppler.
 
-Setting a corpus up is a step for its key's owner, once: `pub corpus init`
-in it, `pub sign --generate-key --principal=human`, `.publet/` in
-`.gitignore`, the key in `pubrules.json`'s `signing_keys` and backed up with
-`./pubsec signing-key`, and its key id in `pubdoc.yml`'s `corpus.key`.
+A corpus is set up once, by its key's owner, with
+
+```bash
+./pubdoc corpus init [PROJECT] --bitwarden-project ID --backup-name NAME
+```
+
+which makes the corpus and its key with `pub` (`pub corpus init`, `pub sign
+--generate-key --principal=human`), names the key as `corpus.key` in
+`pubdoc.yml` (or in the project's `project.yml`, when it names its own
+corpus), declares the key file in `pubrules.json`'s `signing_keys` under NAME
+in the Bitwarden project ID (needed only while it is not declared), puts the
+store in `.gitignore`, and backs the key up with `pubsec signing-key backup`
+(pubsec's pinned wheel, checked by its sha256), which asks for a Bitwarden
+token. Run again, it changes nothing. On another machine, where the config
+already trusts a key this one lacks, it refuses to make another and points
+to `pubsec signing-key restore NAME`; once that has put the key file back,
+`pubdoc corpus init` rebuilds the store around it (`pub sign --restore-key`,
+pub 0.4.1 and later) and checks it is the key `corpus.key` names. Commit the
+corpus's `corpus.json` and the config naming its key.
 
 ## Links with `{pub}`
 

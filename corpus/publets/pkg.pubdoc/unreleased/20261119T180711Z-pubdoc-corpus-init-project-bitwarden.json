@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "pubdoc corpus init [PROJECT] [--bitwarden-project ID] [--backup-name NAME] [--no-backup]: makes the corpus versions are signed in and its key with pub, names the key as corpus.key, declares it in pubrules.json's signing_keys, keeps the store out of git and backs the key up with pubsec's pinned wheel; idempotent; where the config trusts a key this machine lacks it points to pubsec signing-key restore, and around a key restored that way it rebuilds the store with pub sign --restore-key and checks it is the trusted key"
+}
