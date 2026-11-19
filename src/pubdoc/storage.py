@@ -11,9 +11,11 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import posixpath
 import shutil
 import subprocess
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 from pathlib import Path
@@ -39,11 +41,21 @@ def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """A redirect would carry the token to wherever it points: refuse it."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(req.full_url, code, f"redirected to {newurl}, not followed", headers, fp)
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
 def _request(request: urllib.request.Request, auth: str | None) -> bytes:
     if auth:
         request.add_header("Authorization", f"Bearer {auth}")
     try:
-        with urllib.request.urlopen(request, timeout=120) as answer:
+        with _OPENER.open(request, timeout=120) as answer:
             return answer.read()
     except urllib.error.HTTPError as e:
         detail = e.read().decode("utf-8", "replace")[:300]
@@ -70,14 +82,34 @@ def upload(base: str, tenant: str, name: str, data: bytes, label: str) -> str:
     return f"{base}{answer['url']}"
 
 
-def download(url: str, expected: str) -> bytes:
-    """The file at `url`, refused unless its SHA-256 is `expected`."""
+def within(url: str, base: str) -> bool:
+    """Whether `url` is under `base` (a tenant's address, such as
+    https://storage.sustenaut.eu/documents/): the same scheme, host and port,
+    no user or password, and a path that stays under base's once . and ..
+    are resolved. Only then does a request carry the token."""
+    u, b = urllib.parse.urlsplit(url), urllib.parse.urlsplit(base)
+    if u.username or u.password or u.query or u.fragment or "%" in u.path:
+        return False
+    if (u.scheme, u.hostname, u.port) != (b.scheme, b.hostname, b.port):
+        return False
+    path, prefix = posixpath.normpath(u.path), posixpath.normpath(b.path)
+    if path != u.path:  # a . or .. segment, or a doubled /
+        return False
+    return path.startswith(prefix.rstrip("/") + "/")
+
+
+def download(url: str, expected: str, base: str) -> bytes:
+    """The file at `url`, refused unless it is under `base`, the tenant the
+    project names (so the token goes nowhere else), and unless its SHA-256
+    is `expected`."""
+    if not within(url, base):
+        raise StorageError(f"{url} is not in the project's storage tenant, {base}: not fetched")
     data = _request(urllib.request.Request(url), token())
     if sha256(data) != expected:
         raise StorageError(f"{url} is not the file recorded: its sha256 is {sha256(data)}, not {expected}")
     return data
 
 
-def save(url: str, expected: str, target: Path) -> Path:
-    target.write_bytes(download(url, expected))
+def save(url: str, expected: str, base: str, target: Path) -> Path:
+    target.write_bytes(download(url, expected, base))
     return target

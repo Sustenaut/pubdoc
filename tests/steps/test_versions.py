@@ -154,3 +154,26 @@ def pubdoc_ran(repo, run, env, args):
     argv = args.strip().strip('"').split('" "')
     done = run(pubdoc(), *argv, cwd=repo, env=env)
     assert done.code == 0, done
+
+
+@given(parsers.parse('the newest "{layout}" render of "{doc}" is recorded at "{url}"'), target_fixture="asked")
+def recorded_at(repo, storage, layout, doc, url):
+    path = repo / doc / "versions" / "versions.yml"
+    data = yaml.safe_load(path.read_text())
+    host = storage.url.split("://", 1)[1]
+    data["versions"][0]["renders"][layout]["url"] = url.replace("{storage}", storage.url).replace("{host}", host)
+    path.write_text(yaml.safe_dump(data, sort_keys=False))
+    return storage.requests
+
+
+@then("storage was asked for nothing more")
+def nothing_more(storage, asked):
+    assert storage.requests == asked, storage.requests
+
+
+@given(parsers.parse('the newest version is dropped from "{doc}"\'s versions.yml'))
+def drop_newest(repo, doc):
+    path = repo / doc / "versions" / "versions.yml"
+    data = yaml.safe_load(path.read_text())
+    data["versions"] = data["versions"][1:]
+    path.write_text(yaml.safe_dump(data, sort_keys=False))

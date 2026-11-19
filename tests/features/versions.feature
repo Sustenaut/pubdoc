@@ -176,3 +176,52 @@ Feature: Approving a doc makes a signed version, its renders in storage
     And "job-applications/globex/build/review-builder.yaml" contains "- --show"
     And "job-applications/globex/build/review-builder.yaml" contains "- approve"
     And "job-applications/globex/build/versions" does not exist
+
+  Scenario: verify takes the corpus from the project's settings, not from versions.yml
+    Given pubdoc "approve" "job-applications/globex" has run
+    And a corpus at "forged" with its signing key
+    And in "job-applications/globex/versions/versions.yml" "corpus: ../../../corpus" becomes "corpus: ../../../forged"
+    When I run pubdoc "verify"
+    Then the exit code is 1
+    And stderr mentions "names the corpus '../../../forged', and the project's is corpus"
+
+  Scenario: verify says which key it accepted when none is named
+    Given pubdoc "approve" "job-applications/globex" has run
+    And everything is committed
+    When I run pubdoc "verify"
+    Then it succeeds
+    And it prints "note: corpus is signed by pub:sha2-256:"
+
+  Scenario Outline: The storage token goes only to the project's tenant: <case>
+    Given pubdoc "approve" "job-applications/globex" has run
+    And the newest "cv-pdf" render of "job-applications/globex" is recorded at "<url>"
+    When I run pubdoc "fetch" "job-applications/globex" "--layout" "cv-pdf"
+    Then the exit code is 1
+    And stderr mentions "is not in the project's storage tenant"
+    And storage was asked for nothing more
+
+    Examples:
+      | case              | url                                                  |
+      | another host      | https://example.org/documents/f/abc/x.pdf            |
+      | another tenant    | {storage}/documents-other/f/abc/x.pdf                |
+      | a user in the URL | http://someone@{host}/documents/f/abc/x.pdf          |
+      | another port      | http://127.0.0.1:1/documents/f/abc/x.pdf             |
+      | a .. segment      | {storage}/documents/../other/f/abc/x.pdf             |
+
+  Scenario: verify checks each version's sources against its commit
+    Given the file "job-applications/globex/letter.md" reads "# Not committed"
+    And pubdoc "approve" "job-applications/globex" "--allow-dirty" has run
+    And everything is committed
+    When I run pubdoc "verify"
+    Then the exit code is 1
+    And stderr mentions "job-applications/globex/letter.md at commit"
+    And stderr mentions "is not the file it was built from"
+
+  Scenario: verify finds a version missing from versions.yml
+    Given pubdoc "approve" "job-applications/globex" has run
+    And everything is committed
+    And pubdoc "approve" "job-applications/globex" has run
+    And the newest version is dropped from "job-applications/globex"'s versions.yml
+    When I run pubdoc "verify"
+    Then the exit code is 1
+    And stderr mentions "engineering's newest version is not the corpus's"

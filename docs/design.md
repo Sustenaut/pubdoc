@@ -185,6 +185,25 @@ a signed publet in git, its renders in storage.
   `#identity` and `#renders` (`pub read --dir=objects`) and compares them
   with versions.yml, and checks the corpus's key against `corpus.key`
   where the repository names one.
+- **Upload, then sign.** approve uploads the renders before pub publishes
+  the version, so a publet never names a render storage does not hold. A
+  publish that fails after the upload leaves renders no version names:
+  harmless, since storage keeps each file once by its checksum, and the
+  next approve's upload of the same bytes finds it there.
+- **What verify trusts.** The corpus is the one the project's settings
+  name, never the one a versions.yml names (a versions.yml naming another
+  is an error), and its key is `corpus.key`'s where the repository sets
+  one; otherwise verify says which key signed and accepts it. The newest
+  version of each variant in versions.yml must be the lineage's head in
+  `corpus.lock`, so a version left out of the index shows. Each version's
+  `#sources` are hashed against `git show <commit>:<path>`, so one approved
+  with `--allow-dirty` changes shows; a commit a shallow clone lacks is a
+  note.
+- **The token stays with the tenant.** fetch and verify --remote take
+  render addresses from versions.yml and the `#renders` claim, so the
+  storage token goes only to an address under the project's tenant (same
+  scheme, host and port, no user, no `.` or `..` segments), and a redirect
+  is not followed; any other address is refused, unfetched.
 - **Reviewers.** Running approve is the approval until auth.sustenaut.eu
   sign-off (step 5); when the project names `roles.reviewers`, only they
   may run it.

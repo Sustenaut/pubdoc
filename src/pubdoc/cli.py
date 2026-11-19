@@ -522,7 +522,8 @@ def cmd_fetch(args: argparse.Namespace) -> int:
                 f"({', '.join(entry['renders'])})")
         name = Path(render["url"]).name
         try:
-            target = storage.save(render["url"], render["sha256"], out / name)
+            target = storage.save(render["url"], render["sha256"],
+                                  versions.tenant_base(settings.of(doc.project)), out / name)
         except storage.StorageError as e:
             die(str(e))
         print(target)
@@ -531,12 +532,13 @@ def cmd_fetch(args: argparse.Namespace) -> int:
 
 def cmd_verify(args: argparse.Namespace) -> int:
     files = projects.find(Path(args.path))
-    problems, checked, corpora = [], 0, set()
+    problems, checked, corpora, seen = [], 0, set(), []
     for file in files:
         project, found, _ = load_checked(file)
         if not project:
             problems.extend(str(p) for p in found)
             continue
+        seen.append(project)
         for doc in project.docs:
             if not versions.index_path(doc).is_file():
                 continue
@@ -549,6 +551,16 @@ def cmd_verify(args: argparse.Namespace) -> int:
             except versions.VersionError as e:
                 problems.append(f"{doc.label}: {e}")
             checked += 1
+    for corpus in sorted(corpora):
+        signer = versions.lock(corpus).get("corpus", {}).get("key")
+        trusted = next((settings.of(p).key for p in seen if settings.of(p).corpus == corpus), None)
+        if not trusted:
+            print(f"note: {projects.shown(corpus)} is signed by {signer}; no corpus.key names the key "
+                  "to trust, so that one is accepted")
+    notes = [p for p in problems if p.startswith("note: ")]
+    problems = [p for p in problems if not p.startswith("note: ")]
+    for note in notes:
+        print(note)
     for problem in problems:
         print(f"pubdoc: {problem}", file=sys.stderr)
     if problems:

@@ -113,6 +113,7 @@ class Storage:
 
     def __init__(self):
         self.files: dict[str, bytes] = {}
+        self.requests = 0
         storage = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -120,6 +121,7 @@ class Storage:
                 pass
 
             def authorized(self):
+                storage.requests += 1
                 if self.headers.get("Authorization") != f"Bearer {Storage.TOKEN}":
                     self.answer(401, {"error": "a token is needed"})
                     return False

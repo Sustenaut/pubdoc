@@ -283,6 +283,29 @@ def publish(doc: Doc, variant: str, approval: Approval, renders: list[Render],
 
 # Verifying ---------------------------------------------------------------
 
+def tenant_base(conf: settings.Settings) -> str:
+    return f"{conf.storage_url}/{conf.tenant}/"
+
+
+def source_problems(doc: Doc, where: str, commit: str, rows: list[list]) -> list[str]:
+    """Each source row against the file at `commit`, so a version approved
+    with uncommitted changes shows. A commit this clone lacks (a shallow
+    CI checkout) is a note, not a problem."""
+    root = projects.repo_root(doc.project.path)
+    known = subprocess.run(["git", "-C", str(root), "cat-file", "-e", f"{commit}^{{commit}}"],
+                           capture_output=True)
+    if known.returncode != 0:
+        return [f"note: {where}: commit {commit} is not in this clone; its sources are not checked"]
+    found = []
+    for path, digest in rows:
+        shown = subprocess.run(["git", "-C", str(root), "show", f"{commit}:{path}"], capture_output=True)
+        if shown.returncode != 0:
+            found.append(f"{where}: {path} is not in commit {commit}")
+        elif storage.sha256(shown.stdout) != digest:
+            found.append(f"{where}: {path} at commit {commit} is not the file it was built from")
+    return found
+
+
 def verify_corpus(corpus: Path) -> None:
     """Every generation of `corpus` signed by its key, every object its hash:
     pub checks a parent so whenever a corpus names one, so a scratch corpus
@@ -308,7 +331,13 @@ def verify_doc(doc: Doc, remote: bool) -> list[str]:
     path = index_path(doc)
     index = read_index(doc)
     conf = settings.of(doc.project)
-    corpus = (path.parent / index.get("corpus", "")).resolve() if index.get("corpus") else conf.corpus
+    # The corpus is the one the project's settings name, the one verify_corpus
+    # checked: a versions.yml naming any other is not taken at its word.
+    corpus = conf.corpus
+    named = (path.parent / index.get("corpus", "")).resolve() if index.get("corpus") else None
+    if named != corpus:
+        problems.append(f"{projects.shown(path)}: names the corpus {index.get('corpus')!r}, "
+                        f"and the project's is {projects.shown(corpus)}")
     signer = lock(corpus).get("corpus", {}).get("key")
     if index.get("key") != signer:
         problems.append(f"{projects.shown(path)}: key {index.get('key')} is not the corpus's, {signer}")
@@ -322,6 +351,7 @@ def verify_doc(doc: Doc, remote: bool) -> list[str]:
         try:
             identity = claim_rows(corpus, objects.get("identity", ""), IDENTITY)[0]
             rendered = claim_rows(corpus, objects.get("renders", ""), RENDERS)
+            sourced = claim_rows(corpus, objects.get("sources", ""), SOURCES)
         except (VersionError, KeyError, IndexError, json.JSONDecodeError) as e:
             problems.append(f"{where}: its publet cannot be read: {e}")
             continue
@@ -331,15 +361,22 @@ def verify_doc(doc: Doc, remote: bool) -> list[str]:
                              ("approved_by", entry.get("approved_by")), ("commit", entry.get("commit"))):
             if stated.get(field) != value:
                 problems.append(f"{where}: says {field} {value!r}, its publet {stated.get(field)!r}")
+        problems.extend(source_problems(doc, where, stated.get("commit", ""), sourced))
         renders = {row[0]: {"url": row[4], "sha256": row[2]} for row in rendered}
         if renders != entry.get("renders"):
             problems.append(f"{where}: its renders are not the ones its publet records")
         if remote:
             for layout, render in renders.items():
                 try:
-                    storage.download(render["url"], render["sha256"])
+                    storage.download(render["url"], render["sha256"], tenant_base(conf))
                 except storage.StorageError as e:
                     problems.append(f"{where}: {layout}: {e}")
+    for variant in numbers:
+        head = locked(corpus, f"{slug(doc, variant)}#identity")
+        newest = latest(index, variant)
+        if newest and head != newest["objects"].get("identity"):
+            problems.append(f"{projects.shown(path)}: {variant}'s newest version is not the corpus's, "
+                            f"{head}: a version is missing from versions.yml")
     for variant, seen in numbers.items():
         if seen != sorted(seen, reverse=True) or sorted(seen) != list(range(1, len(seen) + 1)):
             problems.append(f"{projects.shown(path)}: {variant}'s versions are {seen}, not newest first from 1")
