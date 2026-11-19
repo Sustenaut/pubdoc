@@ -11,8 +11,9 @@ license = "Apache-2.0"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [{ name = "David Schryer", email = "schryer@gmail.com" }]
-# None: Curvenote runs through npx, and typst and review-builder are programs.
-dependencies = []
+# project.yml and doc.yml are YAML, checked against the JSON Schema pubdoc
+# carries. Curvenote runs through npx, and typst and review-builder are programs.
+dependencies = ["pyyaml>=6", "jsonschema>=4.18"]
 
 [project.urls]
 Repository = "https://github.com/Sustenaut/pubdoc"
@@ -24,7 +25,7 @@ pubdoc = "pubdoc.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-pubdoc = ["templates/*", "templates/*/*"]
+pubdoc = ["templates/*", "templates/*/*", "schema/*"]
 
 # `make functional` measures the suite, the `pubdoc` processes it starts
 # included, into coverage/coverage.xml for SonarQube Cloud.

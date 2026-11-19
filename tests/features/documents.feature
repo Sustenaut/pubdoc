@@ -1,73 +1,78 @@
-Feature: pubdoc lists documents and approves a variant's PDF
-  A document is a directory holding a myst.yml; a variant is a directory of
-  it holding a review-builder.yaml. `approve` is what review-builder's
-  Accept button runs: it copies main.pdf into versions/, dated, and prints
-  that path.
+Feature: pubdoc lists projects, and previews and approves one PDF render
+  `list` names each project and its docs. `preview` writes review-builder's
+  configuration for one render into the doc's build/ and runs it there;
+  `approve`, which its Accept button runs, copies that render's PDF into
+  the doc's versions/, dated, and prints that path, which build/versions
+  (a link to it) makes reachable from the preview.
 
   Background:
-    Given a document "cv" exporting "cv/main.typ"
+    Given the example project
 
   Scenario: --version names the release
     When I run pubdoc "--version"
     Then it succeeds
     And it prints "pubdoc "
 
-  Scenario: list names the documents here
-    Given a document "letter" exporting "cv/main.typ"
+  Scenario: list names the projects and their docs
     When I run pubdoc "list"
     Then it succeeds
-    And it prints "cv"
-    And it prints "letter"
+    And it prints "job-applications: Win software engineering and research roles"
+    And it prints "job-applications/acme  (engineering, research)"
+    And it prints "job-applications/globex  (engineering)"
 
-  Scenario: variants names a document's variants
-    When I run pubdoc "variants" "cv"
+  Scenario: list names a project that does not load
+    Given the file "job-applications/project.yml" reads "project: job-applications"
+    When I run pubdoc "list"
     Then it succeeds
-    And it prints "cv"
+    And it prints "job-applications: does not load; see `pubdoc check`"
 
-  Scenario: approve names the copy after version_name
-    Given "cv/cv/review-builder.yaml" sets version_name "Jane_Doe_CV"
-    And "cv/cv/main.pdf" is built
-    When I run pubdoc "approve" "cv" "cv"
+  Scenario: variants names a doc's variants, as its doc.yml narrows them
+    When I run pubdoc "variants" "job-applications/globex"
     Then it succeeds
-    And it prints today's "versions/Jane_Doe_CV" PDF
-    And today's "cv/cv/versions/Jane_Doe_CV" PDF exists
+    And it prints "engineering"
+    And it does not print "research"
 
-  Scenario: Without version_name the copy is named after the directories
-    Given "cv/cv/main.pdf" is built
-    When I run pubdoc "approve" "cv" "cv"
-    Then it succeeds
-    And today's "cv/cv/versions/cv_cv" PDF exists
-
-  Scenario: A document's only variant needs no naming
-    Given "cv/cv/review-builder.yaml" sets version_name "Jane_Doe_CV"
-    And "cv/cv/main.pdf" is built
-    When I run pubdoc "approve" "cv"
-    Then it succeeds
-    And today's "cv/cv/versions/Jane_Doe_CV" PDF exists
-
-  Scenario: With two variants, one must be named
-    Given a document "paper" exporting "ieee/main.typ"
-    And "paper" also exports "lapreprint/main.typ"
-    When I run pubdoc "approve" "paper"
+  Scenario: variants needs one doc, not a project
+    When I run pubdoc "variants" "job-applications"
     Then the exit code is 1
-    And stderr mentions "paper has 2 variants (ieee, lapreprint); name one"
+    And stderr mentions "job-applications is a project; name one of its docs: job-applications/acme, job-applications/globex"
 
-  Scenario: preview serves a document's only variant, on the port given
-    When I run pubdoc "preview" "cv" "8746"
+  Scenario: approve copies one render into the doc's versions/
+    Given "job-applications/acme/build/research/cv-pdf.pdf" is built
+    When I run pubdoc "approve" "job-applications/acme" "research" "cv-pdf"
     Then it succeeds
-    And review-builder-preview was run in "cv/cv" with "8746"
+    And it prints today's "versions/acme_research_cv-pdf" PDF
+    And today's "job-applications/acme/versions/acme_research_cv-pdf" PDF exists
 
-  Scenario: preview serves the variant named
-    When I run pubdoc "preview" "cv" "cv"
+  Scenario: A doc's only PDF render needs no naming
+    Given the file "job-applications/globex/doc.yml" reads "{variants: [engineering], layouts: [cv-pdf]}"
+    And "job-applications/globex/build/engineering/cv-pdf.pdf" is built
+    When I run pubdoc "approve" "job-applications/globex"
     Then it succeeds
-    And review-builder-preview was run in "cv/cv" with ""
+    And today's "job-applications/globex/versions/globex_engineering_cv-pdf" PDF exists
+
+  Scenario: With several PDF renders, approve says which there are
+    When I run pubdoc "approve" "job-applications/globex"
+    Then the exit code is 1
+    And stderr mentions "job-applications/globex has 2 PDF renders (engineering cv-pdf, engineering letter-pdf); name the variant and layout"
+
+  Scenario: A render the doc does not have is refused
+    When I run pubdoc "approve" "job-applications/globex" "research" "cv-pdf"
+    Then the exit code is 1
+    And stderr mentions "job-applications/globex has no PDF layout for research and cv-pdf"
 
   Scenario: approve needs a built PDF
-    When I run pubdoc "approve" "cv" "cv"
+    When I run pubdoc "approve" "job-applications/acme" "research" "cv-pdf"
     Then the exit code is 1
-    And stderr mentions "not built yet"
+    And stderr mentions "job-applications/acme/build/research/cv-pdf.pdf not built yet"
 
-  Scenario: approve needs a variant
-    When I run pubdoc "approve" "cv" "web"
-    Then the exit code is 1
-    And stderr mentions "cv/web has no review-builder.yaml"
+  Scenario: preview runs review-builder in the doc's build/, on the port given
+    When I run pubdoc "preview" "job-applications/globex" "engineering" "cv-pdf" "--port" "9000"
+    Then it succeeds
+    And review-builder-preview was run in "job-applications/globex/build" with "9000"
+    And "job-applications/globex/build/review-builder.yaml" contains "pdf_path: engineering/cv-pdf.pdf"
+    And "job-applications/globex/build/review-builder.yaml" contains "- ../letter.md"
+    And "job-applications/globex/build/review-builder.yaml" contains "- ../../shared/base-cv/cv.md"
+    And "job-applications/globex/build/review-builder.yaml" contains "- ../../project.yml"
+    And "job-applications/globex/build/review-builder.yaml" contains "- approve"
+    And "job-applications/globex/build/versions" links to "../versions"

@@ -3,7 +3,7 @@
 The design notes behind pubdoc's command, templates and plugins, and the
 MyST and Typst behaviour they work around. Paths are written as a
 consumer repository sees them: `./pubdoc` is the launcher `pubdoc init`
-writes, and `../.pubdoc/templates/...` is where each `myst.yml` finds the
+writes, and `build/templates/...` is where each doc's build finds the
 templates the command copies in. In this repository the templates live in
 `src/pubdoc/templates/`.
 
@@ -18,79 +18,143 @@ of its own, without review-builder needing to know anything about either.
 Do not add MyST/Curvenote-specific code to `review-builder` itself for this
 reason — it belongs in pubdoc.
 
+## Document projects: the model
+
+A document project holds the parts one purpose needs, under one
+`project.yml` that every doc in it follows, the way `pubrules.json` does
+for a software repository. The words, as David set them on 2026-11-18:
+
+- **project**: the parts needed for one purpose (job-applications: a
+  letter and a CV, maybe a webpage later).
+- **part**: one kind of document the project needs.
+- **doc**: one use of the project (the Veriff application), holding each
+  required part.
+- **shared part**: one docs start from (the base CV).
+- **variant**: an audience; **layout**: a template or exporter and a
+  format. Review steps and places are named now and implemented later.
+
+The schema is pubdoc's (`src/pubdoc/schema/`, JSON Schema 2020-12,
+validated with `jsonschema`), so the generic part is public and a private
+repository holds only content and its configuration. `projects.py` loads
+and checks projects; `registry.py` holds the names a project may pick:
+templates (every directory under `templates/` with a `template.yml`),
+exporters, checkers and places. Checkers and places are declared before
+they run, so a project can say now which review steps and places it will
+use; `check` notes that they are not implemented rather than failing.
+
+Choices the model settles beyond the plan:
+
+- **Docs are found, not declared.** A doc is a directory beside
+  `project.yml` holding a `doc.yml` or a file named after one of the
+  project's parts (`<part>.md` or `<part>.<x>.md`). `shared/`, `build/`,
+  `versions/`, hidden directories and nested projects are never docs, so
+  an `images/` directory beside the docs is left alone.
+- **Override order.** For a variant, a part is the doc's
+  `<part>.<variant>.md`, else the doc's `<part>.md`, else the shared
+  part's `<part>.<variant>.md`, else the shared part's `<part>.md`. The
+  doc's own file wins over a shared variant because it is the more
+  specific content. `<part>.<x>.md` with an `x` that is no variant is an
+  error: a typo would otherwise silently fall back to the base part.
+- **Narrowing.** `doc.yml` may name a subset of variants and layouts;
+  publications that each fit inside one project publication to the same
+  place (layouts, variants, and readers no wider: `named` < `signed-in` <
+  `public`); and review steps that keep every project step in order, with
+  at least its checkers and its human reviewers, plus steps of its own.
+- **Formats a layout can make** come from its template or exporter: every
+  template pubdoc carries is Typst, so makes `pdf`; `linkedin` makes
+  `text`. `html` is in the schema but nothing makes it yet, so `check`
+  refuses an `html` layout until something does.
+- **A human step's reviewer count** may not exceed the logins in
+  `roles.reviewers`, or the step could never pass.
+
 ## The `pubdoc` command
 
-Single dispatcher: `./pubdoc {list|variants|open|build|preview|approve} <name> [variant] [port]`.
-`build --all` runs `build` on every document `list` finds, after copying the
-templates once, and keeps going past a document that fails, so a single run
-says every document that no longer builds (a summary line names them, and
-it exits non-zero); `build <name>` still stops at the first failure.
-It replaced an older standalone Rust tool, also called `pubdoc`, whose
-source was lost, and then a shell script, `scripts/doc`; it does the same
-steps. Before `open` and `build` it copies this release's templates into
-`.pubdoc/templates/` beside the documents (gitignored), which is what
-every `myst.yml` points at.
-`build` runs `npx --yes curvenote@<pinned> build --typst` in the doc
-directory, then `typst compile` on each `output:` listed in `myst.yml`.
-It resolves `<name>`/`<variant>` against whatever directory it's invoked
-from, the same way `git` resolves paths, rather than against its own
-location. `review-builder.yaml`'s `build_cmd`/`commit_cmd` run with cwd =
-`<name>/<variant>/`, so they invoke it as
-`["../../pubdoc", "build", ".."]` /
-`["../../pubdoc", "approve", "..", "<variant>"]` — `..` is the doc
-directory relative to that cwd, and `../../pubdoc` holds because
-every doc sits directly under the consumer repo's root, next to the
-`./pubdoc` launcher.
+`./pubdoc {check|list|build|preview|approve|open|variants|new-project|linkedin|init}`.
+Every path argument resolves against the directory it is run from, the
+way `git` resolves paths, and the command finds the repository's projects
+itself: `check`, `list` and `build --all` run `git ls-files --cached
+--others --exclude-standard` and take every `project.yml` it lists, so a
+project can live in any repository and at any depth, and ignored build
+output never counts. Outside a git work tree they walk the disk, skipping
+`build/`, `_build/`, `node_modules/` and hidden directories. `check` given
+a path inside a project (a doc) checks that project.
+
+### Building a doc
+
+`build <project>/<doc>` first checks the project and refuses one with
+problems. Then, in `<doc>/build/`:
+
+1. writes `.gitignore` holding `*`, so build output ignores itself in any
+   repository, with nothing to add to the repository's own ignores;
+2. copies this release's templates and plugins into `templates/`,
+   rewriting only the files that differ, so a running preview sees no
+   churn;
+3. stages the doc's files and the shared parts it starts from in `src/`,
+   as they sit in the project (`src/<doc>/...`, `src/shared/<name>/...`),
+   and writes `src/myst.yml` from `project.yml`: one Typst export per
+   variant x template layout, `article:` the part's resolved file,
+   `output: ../<variant>/<layout>.typ`;
+4. runs the pinned Curvenote (`npx --yes curvenote@<pinned> build
+   --typst`) in `src/`, then `typst compile` on each export into
+   `<variant>/<layout>.pdf`;
+5. runs each exporter layout: `linkedin` runs `linkedin-text.mjs` on the
+   staged part, in the doc's directory, into `<variant>/<layout>.txt`.
+
+**Why stage, rather than point myst.yml at the files.** Curvenote's
+project is the directory holding `myst.yml`, and it will not build an
+`article:` outside it: a `myst.yml` in `build/` naming `../letter.md`
+fails with "No valid files ... found". A `myst.yml` beside the docs would
+work but sits in the source tree and is shared by every doc of the
+project. Copying the doc and its shared parts into `build/src/` keeps the
+project's own layout, so a part's `{include} ../shared/base-cv/cv.md`
+still resolves, and keeps everything generated inside `build/`.
+
+The plugins `myst.yml` lists are `annotations.mjs` always and
+`pub-plugin.mjs` when a `publets-local.json` sits in the doc's directory
+or any above it: the `{pub}` plugin stops at load without one.
+
+### Preview and approve
+
+`preview` and `approve` act on one PDF render: a variant and a template
+layout, which can be left out when the doc has only one. review-builder
+reads `review-builder.yaml` from its working directory and serves only
+files inside it (`SimpleHTTPRequestHandler(directory=root)`, which 404s on
+any `../` path no matter what `commit_cmd` prints), so the built PDF and
+the approved copy its Accept button links to must both be inside that
+directory. `preview` therefore writes `<doc>/build/review-builder.yaml`
+(generated, inside the ignored `build/`) with:
+
+- `build_cmd`: this pubdoc (`python -m pubdoc`, the interpreter running
+  it, so the preview rebuilds with the same release) building just that
+  render, `--variant V --layout L`;
+- `pdf_path`: `<variant>/<layout>.pdf`;
+- `watched_files`: the doc's and its shared parts' `.md`, `.yml` and
+  `.bib` files and `project.yml`;
+- `commit_cmd`: `approve` of that render;
+- `preview_dirname`: `preview/<variant>/<layout>`, so previews of two
+  renders of one doc do not share state;
+
+and links `build/versions` to `../versions`. `approve` copies the PDF to
+`<doc>/versions/<doc>_<variant>_<layout>_<date>.pdf` and prints
+`versions/<file>`, which is right relative to both the doc and `build/`.
+Committed dated PDFs are the version record for now; a later step makes
+an approval a publet, with the renders in storage.
+
+`open <project>/<doc>` stages the doc the same way and runs `curvenote
+start` in `build/src/`, a live site of the MyST sources themselves.
+
+### The launcher
 
 The launcher names no release. It reads the wheel URL from
 `requirements-pubdoc.txt` beside it (found through the script's own path,
-so `../../pubdoc` from a variant directory reads the root's file), a line
+so `../pubdoc` from a subdirectory reads the root's file), a line
 `pubdoc @ https://github.com/Sustenaut/pubdoc/releases/download/vX.Y.Z/pubdoc-X.Y.Z-py3-none-any.whl`,
 and runs `uvx --from` that URL. That is the form of a release wheel pin
 pubrules's nightly moves in any requirements file, so moving a repository
 to a new pubdoc touches only that one line, and needs no `pubdoc init`;
 without the file, or without a `pubdoc @` line in it, the launcher says so
-and stops.
-
-`open` and `build` operate on a whole *document* (no variant argument):
-`build` regenerates every variant listed in that doc's `myst.yml` in one
-`curvenote build --typst` call, since Curvenote itself builds every
-configured export together. `preview` and `approve` operate on one
-*variant* at a time, since review-builder only ever shows one built
-artifact — three review "moments" in total:
-
-1. `./pubdoc open <name>` — review the MyST project itself as a live
-   Curvenote site (content, headings, footnote rendering,
-   cross-references). Same for every variant, since it's the same
-   `index.md`.
-2. `./pubdoc preview <name> <variant>` — review-builder's watch/build/serve
-   loop, showing that variant's Typst-built PDF, rebuilding (all variants,
-   though only one is shown) on every save. The green **Accept** button in
-   that preview **is the approval step**.
-3. Accepting runs `./pubdoc approve <name> <variant>`, which copies that
-   variant's just-built PDF into `<name>/<variant>/versions/` with today's
-   date and prints that path (the convention review-builder's Accept
-   button expects — see `review_builder/server.py`'s commit endpoint in
-   the review-builder repo). The filename defaults to
-   `<doc-dir>_<variant>_<date>.pdf` (e.g. `cv`'s own `cv/` variant would
-   otherwise be `cv_cv_2026-09-22.pdf`); add `version_name: "..."` to that
-   variant's `review-builder.yaml` to override the `<doc-dir>_<variant>`
-   part instead — `cv/cv/`'s carries `version_name: "David_Schryer_CV"`
-   so its approved snapshots read `David_Schryer_CV_2026-09-22.pdf`.
-   `pubdoc` parses that one line itself (a plain line scan, not a
-   real YAML parser), so it needs to be a literal `version_name: value`
-   or `version_name: "value"`
-   line, not a multi-line or nested YAML structure.
-
-**`versions/` lives inside each variant directory, not shared at the doc
-level** — this looks redundant (variant is already in the containing path)
-but is load-bearing: review-builder serves files via Python's
-`SimpleHTTPRequestHandler(directory=root)`, which is sandboxed to `root`
-(wherever that variant's `review-builder.yaml` lives) and will 404 on any
-`../` path no matter what `commit_cmd` prints. `versions/` has to be
-reachable *within* that root for the Accept button's link to actually
-resolve. Found this the hard way building the second variant here — it's
-not a design preference, it's a hard constraint of the tool.
+and stops. The command replaced an older standalone Rust tool, also called
+`pubdoc`, whose source was lost, and then a shell script, `scripts/doc`.
 
 ## The template library
 
@@ -192,8 +256,8 @@ only dedupes *within one file*, since the definition has to be repeated
 in each document that wants it.
 
 The fix here is a custom MyST role, `{pub}`, wired up exactly like
-`annotations.mjs` below (`project.plugins` in `myst.yml`): any doc that
-lists `../.pubdoc/templates/pub-plugin.mjs` gets access to it. A **publet** is
+`annotations.mjs` below (`project.plugins` in the `myst.yml` a build
+writes): every doc in a repository with a `publets-local.json` gets it. A **publet** is
 one concept — a technology, standard, or company — captured as its own
 small Markdown file under the consumer's `publets/`: flat frontmatter
 (`id`, `url`, `text`, optional `plural`) plus a one-paragraph synopsis
@@ -311,10 +375,12 @@ LinkedIn has no write API for profiles and renders no Markdown or links in
 most fields, so this is a plain-text export for copy-pasting by hand:
 
 ```
-./pubdoc linkedin cv/index.md > linkedin.txt
+./pubdoc linkedin job-applications/veriff/cv.md > linkedin.txt
 ```
 
-It reads the same `index.md` the PDF is built from and resolves `{pub}`
+or as a project layout, `{exporter: linkedin, format: text}`, which
+`build` writes to `build/<variant>/<layout>.txt`. It reads the same part
+the PDF is built from and resolves `{pub}`
 tags through `pub-plugin.mjs`'s exported `resolvePub()`, so a publet
 rename or retarget shows up here too. Output: a deduplicated skills list
 (every `{pub}` in `# Technical Skills` plus every "Key technologies"
@@ -333,9 +399,9 @@ tracked; redirect it somewhere outside the repo or delete it afterwards.
 
 ## Regenerating a doc's Typst output
 
-If a variant's `main.typ`/`main.pdf` look wrong, the fix belongs in
-`index.md` (or `myst.yml`'s frontmatter — title, authors, abstract part,
-keywords, etc.), never in `main.typ` directly. Two format-conversion
+If a render's `build/<variant>/<layout>.typ`/`.pdf` look wrong, the fix
+belongs in the part's Markdown (or its frontmatter — title, authors,
+abstract part, keywords, etc.), never in the generated `.typ`. Two format-conversion
 quirks worth knowing about, hit and fixed while building the first doc
 here — both are facts about how MyST's typst exporter behaves, not
 specific to any one template, so they'll recur in future docs:
@@ -368,7 +434,7 @@ specific to any one template, so they'll recur in future docs:
   annum (B) University of Toronto Fellowship – $1200` silently mangled
   the entire stretch between the two `$` into letter-spaced garbage, with
   no build error or warning to flag it. Escape any literal dollar amount
-  as `\$15000` in `index.md`. Only *paired* `$...$` on the same line (or
+  as `\$15000` in the part. Only *paired* `$...$` on the same line (or
   across the surrounding text) triggers this — a single unpaired `$`
   (e.g. one dollar figure with no second `$` anywhere nearby) passes
   through fine, which is why this is easy to miss until a doc happens to
@@ -393,8 +459,8 @@ For a review/fact-check style document (the pattern `killer-whale-menopause-fact
 established, reuse it rather than reinventing per doc). Four pieces:
 
 **1. In-text markers use a custom plugin**, `templates/annotations.mjs`
-(shared library, like the Typst templates — reference it from any doc's
-`myst.yml`: `project.plugins: [../.pubdoc/templates/annotations.mjs]`). It
+(shared library, like the Typst templates — every build's generated
+`myst.yml` lists it, so any part can use its roles). It
 defines four inline roles, one per verdict, each taking a short, stable
 **name** — not a number — as its only argument:
 
@@ -490,12 +556,12 @@ Corroborated by [secondary source](url).
 ```
 
 **4. Citations and the Bibliography itself are native MyST**, not
-hand-typed source strings: put real BibTeX entries in `<name>/refs.bib`
-(git-tracked, real source — this is content, like `index.md`) and cite
-with `[@bibkey]`. MyST auto-detects any `.bib` file in the doc directory;
+hand-typed source strings: put real BibTeX entries in `<doc>/refs.bib`
+(git-tracked, real source — this is content, like the parts) and cite
+with `[@bibkey]`. MyST auto-detects any `.bib` file in the staged sources;
 no explicit frontmatter wiring needed. Both templates in the library
 render a proper References/Bibliography section — **always after all body
-content, regardless of where in `index.md` the citations appear** (both
+content, regardless of where in the part the citations appear** (both
 `lapreprint.typ` and `charged-ieee`'s `lib.typ` place the `bibliography(...)`
 call after `body` in their template function) — so don't bother adding
 your own "## Bibliography" heading, it'll just be an empty heading with
@@ -545,5 +611,5 @@ environment-dependent failure, test with a stripped `PATH` the way
 `cv-builder`'s `AGENTS.md` recommends:
 
 ```
-env -i HOME="$HOME" PATH="/usr/bin:/bin:$HOME/.local/bin" ./pubdoc build <name>
+env -i HOME="$HOME" PATH="/usr/bin:/bin:$HOME/.local/bin" ./pubdoc build <project>/<doc>
 ```

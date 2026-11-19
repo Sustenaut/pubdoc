@@ -1,10 +1,11 @@
 Feature: pubdoc init sets a repository up to run this release
   `init` writes requirements-pubdoc.txt, which pins this release's wheel in
   the form pubrules's nightly moves, and ./pubdoc, which names no release and
-  runs the one that file pins with uvx; it also ignores the templates every
-  build copies into .pubdoc/.
+  runs the one that file pins with uvx. Builds write only into each doc's
+  build/, which ignores itself, so init touches no .gitignore.
+  `new-project` starts a project: a project.yml and a first doc that check.
 
-  Scenario: init writes the launcher and the ignore rule
+  Scenario: init writes the launcher and its pin
     Given the file ".gitignore" reads "*.pdf"
     When I run pubdoc "init"
     Then it succeeds
@@ -12,13 +13,25 @@ Feature: pubdoc init sets a repository up to run this release
     And "pubdoc" contains "uvx --from"
     And "pubdoc" does not contain "releases/download"
     And "requirements-pubdoc.txt" is one release wheel pin of pubdoc
-    And ".gitignore" contains "/.pubdoc/"
+    And ".gitignore" does not contain "pubdoc"
 
-  Scenario: init again adds no second ignore rule
-    When I run pubdoc "init"
-    And I run pubdoc "init"
+  Scenario: new-project starts a project that checks
+    When I run pubdoc "new-project" "notes" "--purpose" "Meeting notes"
+    And I run pubdoc "check"
     Then it succeeds
-    And ".gitignore" holds "/.pubdoc/" once
+    And "notes/project.yml" contains "purpose: Meeting notes"
+    And "notes/draft/main.md" exists
+
+  Scenario: new-project leaves an existing project alone
+    Given the file "notes/project.yml" reads "project: notes"
+    When I run pubdoc "new-project" "notes"
+    Then the exit code is 1
+    And stderr mentions "notes/project.yml exists already"
+
+  Scenario: A project's name is its directory's, and must be a name
+    When I run pubdoc "new-project" "Notes"
+    Then the exit code is 1
+    And stderr mentions "'Notes' is not a project name"
 
   Scenario: init leaves a directory named pubdoc alone
     Given the file "pubdoc/README.md" reads "an old submodule"

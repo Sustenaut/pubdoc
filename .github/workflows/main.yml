@@ -45,7 +45,7 @@ jobs:
     permissions:
       actions: read
       contents: read
-    with: {"reports": "sonar.python.coverage.reportPaths=*.xml", "layout": "-Dsonar.sources=src -Dsonar.tests=tests", "coverage-run": "${{ needs.tested.outputs.run-id }}"}
+    with: {"sonar-args": "-Dsonar.issue.ignore.multicriteria=pylock -Dsonar.issue.ignore.multicriteria.pylock.ruleKey=text:S8565 -Dsonar.issue.ignore.multicriteria.pylock.resourceKey=pyproject.toml", "reports": "sonar.python.coverage.reportPaths=*.xml", "layout": "-Dsonar.sources=src -Dsonar.tests=tests", "coverage-run": "${{ needs.tested.outputs.run-id }}"}
     secrets: { SONAR_TOKEN: '${{ secrets.SONAR_TOKEN }}' }
 
   # The one check a ruleset requires: it passes only when every job

@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Sustenaut/pubdoc/blob/main/src/pubdoc/schema/project.schema.json",
+  "title": "pubdoc project.yml",
+  "description": "A document project: the parts one purpose needs, the variants (audiences) and layouts (template or exporter, and format) each doc is rendered in, the review steps before publication, and the places it publishes to. Checker, place, template and exporter names are pubdoc's; `pubdoc check` checks them and every cross-reference.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["project", "purpose", "parts", "variants", "layouts"],
+  "properties": {
+    "project": {"$ref": "#/$defs/name", "description": "The project's name."},
+    "purpose": {"type": "string", "minLength": 1, "description": "What the project is for, in a sentence."},
+    "parts": {
+      "type": "object",
+      "description": "The kinds of document a doc of this project holds, by name.",
+      "minProperties": 1,
+      "propertyNames": {"$ref": "#/$defs/name"},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["required"],
+        "properties": {
+          "required": {"type": "boolean", "description": "Whether every doc must supply this part."},
+          "starts-from": {
+            "type": "string",
+            "pattern": "^shared/[a-z0-9][a-z0-9-]*$",
+            "description": "A shared part, shared/<name>/<part>.md, that a doc uses as-is when it supplies no file of its own."
+          }
+        }
+      }
+    },
+    "roles": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contributors": {"$ref": "#/$defs/logins", "description": "GitHub logins that write and edit docs."},
+        "reviewers": {"$ref": "#/$defs/logins", "description": "Accounts that may sign off a human review step."}
+      }
+    },
+    "variants": {
+      "type": "object",
+      "description": "Audiences, by name: what a doc includes and emphasises for each.",
+      "minProperties": 1,
+      "propertyNames": {"$ref": "#/$defs/name"},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["audience"],
+        "properties": {"audience": {"type": "string", "minLength": 1}}
+      }
+    },
+    "layouts": {
+      "type": "object",
+      "description": "How a part is rendered, by name: a pubdoc template or an exporter, and the format it makes.",
+      "minProperties": 1,
+      "propertyNames": {"$ref": "#/$defs/name"},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["part", "format"],
+        "properties": {
+          "part": {"$ref": "#/$defs/name"},
+          "template": {"$ref": "#/$defs/name"},
+          "exporter": {"$ref": "#/$defs/name"},
+          "format": {"enum": ["pdf", "text", "html"]}
+        },
+        "oneOf": [
+          {"required": ["template"], "not": {"required": ["exporter"]}},
+          {"required": ["exporter"], "not": {"required": ["template"]}}
+        ]
+      }
+    },
+    "review": {"$ref": "#/$defs/review"},
+    "publish": {
+      "type": "array",
+      "description": "Where rendered layouts go, and who may read them there.",
+      "items": {"$ref": "#/$defs/publication"}
+    }
+  },
+  "$defs": {
+    "name": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "names": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/name"}},
+    "logins": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$"}
+    },
+    "review": {
+      "type": "array",
+      "description": "Ordered review steps between draft and publication. A step with both automatic checkers and human reviewers needs both to pass.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["step"],
+        "anyOf": [{"required": ["automatic"]}, {"required": ["human"]}],
+        "properties": {
+          "step": {"$ref": "#/$defs/name"},
+          "automatic": {"$ref": "#/$defs/names", "description": "Checker names from pubdoc's registry."},
+          "human": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["reviewers"],
+            "properties": {"reviewers": {"type": "integer", "minimum": 1}}
+          }
+        }
+      }
+    },
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["place", "layouts", "readers"],
+      "properties": {
+        "place": {"$ref": "#/$defs/name", "description": "A place name from pubdoc's registry."},
+        "layouts": {"$ref": "#/$defs/names"},
+        "variants": {"$ref": "#/$defs/names", "description": "Every variant when left out."},
+        "readers": {"enum": ["public", "signed-in", "named"]}
+      }
+    }
+  }
+}

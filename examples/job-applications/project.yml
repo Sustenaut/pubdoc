@@ -1,0 +1,27 @@
+# An example document project: job applications, each a cover letter and a
+# CV that starts from one shared base CV, for two audiences.
+project: job-applications
+purpose: Win software engineering and research roles
+parts:
+  letter: {required: true}
+  cv: {required: true, starts-from: shared/base-cv}
+  webpage: {required: false}
+roles:
+  contributors: [schryer]
+  reviewers: [schryer]
+variants:
+  engineering: {audience: Hiring managers for software roles}
+  research: {audience: Research and R&D groups}
+layouts:
+  letter-pdf: {part: letter, template: cv-sidebar, format: pdf}
+  cv-pdf: {part: cv, template: cv-sidebar, format: pdf}
+  cv-linkedin: {part: cv, exporter: linkedin, format: text}
+review:
+  - step: checks
+    automatic: [build, links, spelling, private-info]
+  - step: approval
+    human: {reviewers: 1}
+publish:
+  - place: storage
+    layouts: [letter-pdf, cv-pdf, cv-linkedin]
+    readers: named

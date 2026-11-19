@@ -1,10 +1,13 @@
 # pubdoc
 
-Build, preview and approve documents written in MyST Markdown as Typst
-PDFs, with review and approval in
-[review-builder](https://github.com/Sustenaut/review-builder). pubdoc
-carries a small template library and two MyST plugins, so a document
-repository holds only its content.
+Check, build, preview and approve document projects written in MyST
+Markdown, as Typst PDFs and other formats, with review and approval in
+[review-builder](https://github.com/Sustenaut/review-builder). A project
+is one `project.yml` naming the parts a purpose needs (a letter and a
+CV), the audiences each is shaped for, the layouts each is rendered in,
+its review steps and where it publishes; pubdoc owns its schema and
+carries a small template library and two MyST plugins, so a repository
+holds only content and configuration.
 
 - `cv-sidebar`: a CV and cover-letter template with rotated section
   labels in a left sidebar.
@@ -42,15 +45,20 @@ pubdoc @ https://github.com/Sustenaut/pubdoc/releases/download/v0.1.0/pubdoc-0.1
 ```
 
 and `./pubdoc`, which names no release: it runs the one that file pins with
-uvx, from the repository's root or through its path from anywhere (as
-review-builder runs `../../pubdoc`). It also adds `/.pubdoc/` to
-`.gitignore`. Commit all three. To move to another release, change the
-line, or let pubrules's nightly move it: that line is a release wheel pin in
+uvx, from the repository's root or through its path from anywhere
+(`../pubdoc check`). Commit both. Builds write only into each doc's
+`build/`, which ignores itself, so nothing needs adding to `.gitignore`.
+To move to another release, change the line, or let pubrules's nightly move it: that line is a release wheel pin in
 a requirements file, which the nightly moves to pubdoc's latest release
 like any other. Running another release's `pubdoc init` the same way
 still works too.
 
-The repository then looks like this:
+## Document projects
+
+A project is a directory holding a `project.yml`, anywhere in a
+repository: pubdoc finds every one git knows of. Its docs are the
+directories beside that file; each is one use of the project (one job
+application) and holds a MyST file per part:
 
 ```
 <repo>/
@@ -58,120 +66,138 @@ The repository then looks like this:
 ├── requirements-pubdoc.txt     the pubdoc release the launcher runs
 ├── publets/                    one Markdown file per linked concept
 ├── publets-local.json          short name -> publet id, shared by every doc
-├── .gitignore
-└── <name>/                     one document
-    ├── index.md                MyST source, the real content
-    ├── myst.yml                which templates and plugins it builds with
-    ├── refs.bib                optional bibliography
-    └── <variant>/              one directory per export, e.g. cv/
-        ├── review-builder.yaml
-        └── versions/           approved, dated PDFs (committed)
+└── job-applications/           one project
+    ├── project.yml
+    ├── shared/base-cv/
+    │   ├── cv.md               a shared part: docs start from it
+    │   └── cv.research.md      ...and its research variant
+    └── veriff/                 one doc
+        ├── letter.md           a part, MyST Markdown
+        ├── letter.research.md  replaces letter.md for the research variant
+        ├── doc.yml             optional: only narrows project.yml
+        ├── refs.bib            optional bibliography
+        ├── versions/           approved, dated PDFs (committed)
+        └── build/              everything pubdoc builds (ignores itself)
 ```
-
-A document's `myst.yml` names the templates in `.pubdoc/templates/`, where
-pubdoc copies them before each build:
 
 ```yaml
-version: 1
-project:
-  title: Jane Doe
-  plugins:
-    - ../.pubdoc/templates/pub-plugin.mjs
-  exports:
-    - format: typst
-      template: ../.pubdoc/templates/cv-sidebar
-      output: cv/main.typ
-site:
-  title: Jane Doe - CV
-  nav: []
+# job-applications/project.yml
+project: job-applications
+purpose: Win software engineering roles
+parts:
+  letter: {required: true}
+  cv: {required: true, starts-from: shared/base-cv}
+  webpage: {required: false}
+roles:
+  contributors: [schryer]
+  reviewers: [schryer]
+variants:
+  engineering: {audience: Hiring managers for software roles}
+  research: {audience: Research and R&D groups}
+layouts:
+  letter-pdf: {part: letter, template: cv-sidebar, format: pdf}
+  cv-pdf: {part: cv, template: cv-sidebar, format: pdf}
+  cv-linkedin: {part: cv, exporter: linkedin, format: text}
+review:
+  - step: checks
+    automatic: [build, links, spelling, private-info]
+  - step: approval
+    human: {reviewers: 1}
+publish:
+  - place: storage
+    layouts: [letter-pdf, cv-pdf, cv-linkedin]
+    readers: named
 ```
 
-Each variant's `review-builder.yaml` calls the launcher; review-builder
-runs these from `<name>/<variant>/`:
+- `parts`: what each doc supplies. A `required` part must resolve for
+  every variant of every doc. `starts-from: shared/<name>` names a shared
+  part, `shared/<name>/<part>.md`.
+- `variants`: audiences. A file `<part>.<variant>.md` replaces
+  `<part>.md` for that variant, in a doc or in a shared part.
+- `layouts`: one part rendered by a template pubdoc carries
+  (`cv-sidebar`, `lapreprint-typst`, `charged-ieee`; each makes a PDF) or
+  by an exporter (`linkedin`, plain text), in a `format`: `pdf`, `text` or
+  `html`.
+- `review`: ordered steps; each has automatic checkers (`build`, `links`,
+  `spelling`, `private-info`), a human sign-off by a number of
+  `roles.reviewers`, or both.
+- `publish`: which layouts (and variants; all when left out) go to which
+  place (`storage`, `pub`), for which readers: `public`, `signed-in` or
+  `named`.
+
+Checker and place names come from pubdoc's registry and are checked
+against it; none runs yet (later releases add review and publishing), and
+`pubdoc check` says so in a note without failing. The schema ships in the
+package as `src/pubdoc/schema/project.schema.json` and `doc.schema.json`.
+
+For each variant, a part comes from the first of: the doc's
+`<part>.<variant>.md`, the doc's `<part>.md`, the shared part's
+`<part>.<variant>.md`, the shared part's `<part>.md`. A doc that supplies
+no file of a part with `starts-from` uses the shared part as it is; a
+doc's own part may also include it with MyST's
+`` ```{include} ../shared/base-cv/cv.md `` ``.
+
+A `doc.yml` can only narrow its project:
 
 ```yaml
-title: "Jane Doe CV"
-watched_files: ["../index.md", "../myst.yml"]
-build_cmd: ["../../pubdoc", "build", ".."]
-pdf_path: "main.pdf"
-default_port: 8746
-commit_cmd: ["../../pubdoc", "approve", "..", "cv"]
-version_name: "Jane_Doe_CV"
+# job-applications/globex/doc.yml
+variants: [engineering]           # a subset of the project's
+layouts: [letter-pdf, cv-pdf]     # a subset of the project's
+publish:                          # each within one project publication
+  - {place: storage, layouts: [cv-pdf], readers: named}
+review:                           # every project step, in order; may add
+  - {step: checks, automatic: [build, links, spelling, private-info]}
+  - {step: approval, human: {reviewers: 1}}
 ```
 
-A repository that uses `{pub}` needs `publets-local.json` and `publets/`
-at its root; `{}` and an empty directory are fine to start with.
-
-`build` writes `main.typ`, `main.pdf` and template support files into each
-variant directory, and Curvenote writes `_build/` into the document's.
-These `.gitignore` lines keep them out and keep the approved PDFs in:
-
-```gitignore
-.preview/
-node_modules/
-/*/_build/
-/*/*/main.typ
-/*/*/main.pdf
-/*/*/main.bib
-/*/*/myst-imports.typ
-/*/*/files/
-/*/*/cv-sidebar.typ
-/*/*/lapreprint.typ
-/*/*/frontmatter.typ
-/*/*/LICENSE
-*.pdf
-!*/*/versions/*.pdf
-```
+It may publish to fewer places, layouts, variants and readers (`named`
+is narrower than `signed-in`, which is narrower than `public`), and it may
+add checkers, reviewers and steps, but never drop or loosen a project
+review step. [examples/job-applications/](examples/job-applications/) is
+a complete project with two docs.
 
 ## Usage
 
-Run from the repository's root:
+Run from anywhere in the repository; paths are relative to where you are:
 
 ```bash
-./pubdoc list                              # the documents here
-./pubdoc variants <name>                   # a document's variants
-./pubdoc open <name> [port]                # a live Curvenote site of it
-./pubdoc build <name>                      # every variant's main.typ and main.pdf
-./pubdoc build --all                       # every document's, reporting each that fails
-./pubdoc preview <name> [variant] [port]   # review-builder's loop, with Accept
-./pubdoc approve <name> [variant]          # copy main.pdf into versions/, dated
-./pubdoc linkedin <name>/index.md          # a CV as plain text for LinkedIn
+./pubdoc check [path]                                   # every project.yml and doc.yml below path
+./pubdoc list [path]                                    # the projects and their docs
+./pubdoc build <project>/<doc>                          # every variant x layout of a doc
+./pubdoc build <project>                                # ...of each of its docs
+./pubdoc build --all                                    # every doc here, reporting each that fails
+./pubdoc build <project>/<doc> --variant V --layout L   # one render
+./pubdoc preview <project>/<doc> [variant] [layout] [--port N]
+./pubdoc approve <project>/<doc> [variant] [layout]     # copy a PDF into versions/, dated
+./pubdoc open <project>/<doc> [--port N]                # a live Curvenote site of it
+./pubdoc variants <project>/<doc>                       # its variants, as doc.yml narrows them
+./pubdoc new-project <path> [--purpose "..."]           # a project.yml and a first doc
+./pubdoc linkedin <file.md>                             # a CV as plain text for LinkedIn
 ```
 
-`<name>` is a path to a document directory, so `./pubdoc build cv` builds
-`cv/cv/main.pdf`. `./pubdoc build --all` builds every document `list`
-finds, each with all its variants, goes on past one that fails, prints
-`built N of M documents` (naming the ones that failed) and exits non-zero
-if any did. `preview` and `approve` act on one variant; leave it out
-when the document has only one, so `./pubdoc approve cv` approves
-`cv/cv/main.pdf`. Accept in the preview page runs `approve`; commit the
-new `versions/*.pdf` afterwards.
+`check` validates each `project.yml` and `doc.yml` against the schema,
+then every name they refer to: a layout's part, template, exporter and
+format, each publication's layouts, variants and place, each review step's
+checkers and reviewer count, each `starts-from`, each doc's required parts
+for each of its variants, variant overrides that name no variant, and that
+each `doc.yml` only narrows. It prints every problem as `path: what is
+wrong` and exits non-zero if there is one. It finds projects with `git
+ls-files` (tracked and untracked, not ignored), so it works in any
+repository; outside a git work tree it searches the disk. `build` checks
+the project first and refuses one with problems.
 
-## Adding a document
+`build` writes `<doc>/build/<variant>/<layout>.<ext>`: `.pdf` for a
+template layout (with its `.typ` source beside it), `.txt` for the
+LinkedIn exporter. `build --all` goes on past a doc that fails, prints
+`built N of M docs` (naming the ones that failed) and exits non-zero if
+any did.
 
-Copy an existing document's `myst.yml` and a variant's
-`review-builder.yaml`, write `index.md`, give each `review-builder.yaml`
-its own `title`, `default_port` and variant name in `commit_cmd`, and run
-`./pubdoc build <name>` once. `approve` names the approved copy
-`<doc-dir>_<variant>_<date>.pdf` unless the variant's
-`review-builder.yaml` sets `version_name: "..."`.
-
-One document can build through several templates: list one export per
-template in `myst.yml`, each with its own output directory.
-
-```yaml
-project:
-  exports:
-    - format: typst
-      template: ../.pubdoc/templates/lapreprint-typst
-      output: lapreprint/main.typ
-    - format: typst
-      template: ../.pubdoc/templates/charged-ieee
-      output: ieee/main.typ
-```
-
-`build` makes all of them in one pass; `preview` and `approve` then need
-the variant (output directory) as their second argument.
+`preview` and `approve` act on one PDF render; leave out the variant and
+layout when the doc has only one. `preview` writes review-builder's
+configuration into `<doc>/build/review-builder.yaml` and runs it there;
+its Accept button runs `approve`, which copies the PDF into
+`<doc>/versions/<doc>_<variant>_<layout>_<date>.pdf` and prints that path.
+Commit the new `versions/*.pdf` afterwards.
 
 ## Links with `{pub}`
 
@@ -201,12 +227,18 @@ make functional    # the Gherkin suite in tests/features/
 ```
 
 The suite runs pubdoc against stand-ins for npx and typst, so it needs
-neither. To try a change on a real document repository, build the wheel
+neither. pubdoc's own dependencies (PyYAML and jsonschema) are
+ranges in `pyproject.toml`, as a package's are, and pinned with hashes for
+the suite in `tests/requirements.lock`. SonarQube Cloud reads no lock in that
+format, so `pubrules.json` turns off its "no lock file beside
+pyproject.toml" rule (`text:S8565`) for that one file in the CI scan, as
+pubrules does. To try a change on a real document repository, build the wheel
 (`make wheel`) and run it there with `uvx --from dist/pubdoc-*.whl pubdoc build <name>`.
 
 A template or plugin change reaches a repository only when that
-repository moves to a release that has it. Rebuild every document there
-(`./pubdoc build --all`) and compare the generated `main.typ` before committing the move.
+repository moves to a release that has it. Rebuild every doc there
+(`./pubdoc build --all`) and compare the generated `build/*/*.typ` before
+committing the move.
 
 ### Releasing
 
