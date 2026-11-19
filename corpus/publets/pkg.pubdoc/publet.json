@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubdoc 0.3.0 is released as v0.3.0 from commit 17f6eba62ee684690c4e8f54ef1ee7f0e0e8387c.",
+      "content": "pubdoc 0.4.0 is released as v0.4.0 from commit e484043ad0fa9f2accf910676541a5a9a32a7735.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubdoc",
-            "0.3.0",
+            "0.4.0",
             "",
             "",
-            "v0.3.0",
-            "17f6eba62ee684690c4e8f54ef1ee7f0e0e8387c"
+            "v0.4.0",
+            "e484043ad0fa9f2accf910676541a5a9a32a7735"
           ]
         ]
       },
-      "scope": "the published release v0.3.0 of pubdoc",
+      "scope": "the published release v0.4.0 of pubdoc",
       "sources": [
         {
           "ref": "pubdoc",
-          "revision": "17f6eba62ee684690c4e8f54ef1ee7f0e0e8387c"
+          "revision": "e484043ad0fa9f2accf910676541a5a9a32a7735"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubdoc 0.3.0 was released on 2026-11-19 from commit 17f6eba62ee684690c4e8f54ef1ee7f0e0e8387c with these changes.",
+      "content": "pubdoc 0.4.0 was released on 2026-11-19 from commit e484043ad0fa9f2accf910676541a5a9a32a7735 with these changes.",
       "data": {
         "columns": [
           {
@@ -57,23 +57,27 @@
         ],
         "rows": [
           [
-            "changed",
-            "pubdoc approve signs a version instead of copying a PDF into versions/: it builds every layout of each variant (each PDF stamped with the approval date, so a rebuild is the same bytes), uploads the renders to the project's storage tenant, has pub 0.4 sign a version publet (lineage doc.<project>.<doc>.<variant>) in the repository's corpus, and records it in <doc>/versions/versions.yml; it refuses uncommitted changes and anyone roles.reviewers does not name, and prints the shown render's address last for review-builder"
+            "added",
+            "pubdoc corpus init [PROJECT] [--bitwarden-project ID] [--backup-name NAME] [--no-backup]: makes the corpus versions are signed in and its key with pub, names the key as corpus.key, declares it in pubrules.json's signing_keys, keeps the store out of git and backs the key up with pubsec's pinned wheel; idempotent; where the config trusts a key this machine lacks it points to pubsec signing-key restore, and around a key restored that way it rebuilds the store with pub sign --restore-key and checks it is the trusted key"
           ],
           [
             "added",
-            "pubdoc versions, fetch (a render, checked by its sha256), verify (versions.yml against the corpus's signed publets, with --remote the renders in storage) and compare (two PDFs: pages, text, pixels); storage and corpus settings in project.yml or a repository-wide pubdoc.yml, checked by pubdoc check"
+            "pubdoc build --date YYYY-MM-DD, which approve now passes too: the doc's date, which templates print, unless a part sets its own, and the PDFs' creation time; with it and the pinned fonts, the PDFs approved before versions existed rebuild identically"
+          ],
+          [
+            "changed",
+            "pubdoc renders with the fonts it carries alone (typst --ignore-system-fonts and pubdoc's fonts/: DejaVu Sans, Ubuntu Regular and Liberation Sans, beside typst's own), so a render no longer changes with the fonts a machine has installed"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.3.0 of pubdoc",
+      "scope": "the published release v0.4.0 of pubdoc",
       "sources": [
         {
           "ref": "pubdoc",
-          "revision": "17f6eba62ee684690c4e8f54ef1ee7f0e0e8387c"
+          "revision": "e484043ad0fa9f2accf910676541a5a9a32a7735"
         }
       ]
     }
