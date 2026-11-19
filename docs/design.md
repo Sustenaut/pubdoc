@@ -183,7 +183,8 @@ a signed publet in git, its renders in storage.
   Modern and DejaVu Sans Mono. And lapreprint prints the doc's date, which
   MyST took to be the day of the build: `build --date`, which approve passes,
   makes it the approval date in the generated myst.yml unless a part sets
-  its own. With both, the killer-whale fact-check (both layouts) and the
+  its own. A part's own date wins because MyST merges a page's frontmatter
+  over the project's, not because of any pubdoc code. With both, the killer-whale fact-check (both layouts) and the
   EHAAL plan rebuild as the PDFs approved in September, pages, text and
   pixels.
 - **Driving pub.** pubdoc writes the publet's source and runs `pub build`

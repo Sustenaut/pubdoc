@@ -16,6 +16,6 @@ Ubuntu's packages:
 | Ubuntu-R.ttf | Ubuntu Regular 0.869 | fonts-ubuntu 0.869+git20240321-0ubuntu2 | Ubuntu Font Licence 1.0, LICENCE-Ubuntu.txt |
 | LiberationSans-*.ttf | Liberation Sans 2.1.5 | fonts-liberation 1:2.1.5-3build1 | SIL Open Font License 1.1, LICENSE-Liberation.txt |
 
-Each licence allows redistributing the fonts unmodified with software. A
+pubdoc's own LICENSE is Apache-2.0, but these font files are not: each is under the licence shipped beside it (Bitstream Vera/DejaVu, Ubuntu Font Licence 1.0, SIL OFL 1.1). Each licence allows redistributing the fonts unmodified with software. A
 template that wants another font names one here, added with its licence, or
 falls back to these.
