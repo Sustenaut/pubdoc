@@ -25,7 +25,7 @@ from pathlib import Path
 
 import yaml
 
-from . import compare, projects, registry, settings, storage, versions
+from . import compare, corpus, projects, registry, settings, storage, versions
 from .projects import BUILD, VERSIONS, Doc, Problem, Project, Render
 
 CURVENOTE_VERSION = "0.17.2"
@@ -588,6 +588,26 @@ def cmd_verify(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_corpus(args: argparse.Namespace) -> int:
+    project = None
+    if args.project:
+        file = Path(args.project) / projects.PROJECT_FILE
+        if not file.is_file():
+            die(f"{args.project} is not a project: it holds no {projects.PROJECT_FILE}")
+        project = project_or_die(file)
+        root = projects.repo_root(project.path).resolve()
+    else:
+        root = projects.repo_root(Path.cwd()).resolve()
+    try:
+        done = corpus.init(project, root, args.backup_name, args.bitwarden_project, not args.no_backup)
+    except (corpus.CorpusError, versions.VersionError) as e:
+        die(str(e))
+    for line in done or ["nothing to do: the corpus, its key and its backup are in place"]:
+        print(line)
+    print("commit the corpus's corpus.json and the config naming its key, if either changed")
+    return 0
+
+
 def cmd_compare(args: argparse.Namespace) -> int:
     try:
         report = compare.compare(Path(args.first), Path(args.second))
@@ -747,6 +767,14 @@ def parser() -> argparse.ArgumentParser:
         ("--out", {"default": ".", "help": "the directory to save into (default: here)"}))
     add("verify", cmd_verify, "check every versions.yml against its corpus's signed publets", where,
         ("--remote", {"action": "store_true", "help": "and that every render in storage has its checksum"}))
+    add("corpus", cmd_corpus, "make the corpus versions are signed in, and its key, once (or rebuild its "
+        "store around a key restored with pubsec signing-key restore), and back the key up",
+        ("action", {"choices": ["init"], "help": "init: make what is missing"}),
+        ("project", {"nargs": "?", "help": "a project that names its own corpus (default: the repository's)"}),
+        ("--bitwarden-project", {"metavar": "ID", "help": "the Bitwarden project the key is backed up to, "
+                                 "when pubrules.json does not declare the key yet"}),
+        ("--backup-name", {"metavar": "NAME", "help": "the backup's name there, when not declared yet"}),
+        ("--no-backup", {"action": "store_true", "help": "do not run pubsec signing-key backup"}))
     add("compare", cmd_compare, "whether two PDFs are the same document: pages, text, pixels",
         ("first", {"help": "a PDF"}), ("second", {"help": "another PDF"}))
     add("linkedin", cmd_linkedin, "a CV's plain-text export for LinkedIn",
