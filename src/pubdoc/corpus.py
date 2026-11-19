@@ -69,10 +69,21 @@ def config_file(root: Path, project: projects.Project | None) -> Path:
     return root / settings.ROOT_FILE
 
 
-def write_key(file: Path, corpus_path: str, key: str) -> None:
+def inside(root: Path, file: Path) -> Path:
+    """`file`, resolved, refused unless it lies in the repository at `root`:
+    corpus init writes nothing anywhere else."""
+    base = os.path.realpath(root)
+    target = os.path.realpath(file)
+    if os.path.commonpath([base, target]) != base:
+        raise CorpusError(f"{file} is outside the repository at {root}; nothing written")
+    return Path(target)
+
+
+def write_key(root: Path, file: Path, corpus_path: str, key: str) -> None:
     """Name `key` as corpus.key in `file`, keeping its other lines (comments
     included): a `corpus:` line in flow style gains or changes its key; a
     file without one gains one."""
+    file = inside(root, file)
     text = file.read_text(encoding="utf-8") if file.is_file() else ""
     lines = text.splitlines()
     for i, line in enumerate(lines):
@@ -92,7 +103,7 @@ def write_key(file: Path, corpus_path: str, key: str) -> None:
 def declare(root: Path, key_path: str, name: str | None, project_id: str | None) -> str | None:
     """The Bitwarden name pubrules.json's signing_keys gives the key at
     `key_path`, declaring it when it is not declared yet."""
-    rules = root / RULES
+    rules = inside(root, root / RULES)
     if not rules.is_file():
         return None
     config = json.loads(rules.read_text(encoding="utf-8"))
@@ -115,7 +126,7 @@ def declare(root: Path, key_path: str, name: str | None, project_id: str | None)
 
 
 def ignore(root: Path, store: str) -> bool:
-    gitignore = root / ".gitignore"
+    gitignore = inside(root, root / ".gitignore")
     text = gitignore.read_text(encoding="utf-8") if gitignore.is_file() else ""
     line = f"/{store}/"
     if line in text.splitlines():
@@ -168,7 +179,7 @@ def init(project: projects.Project | None, root: Path, backup_name: str | None,
         key = author(corpus)
         if not (key and key.startswith("pub:sha2-256:")):
             raise CorpusError(f"pub made a key, and {projects.shown(corpus / STORE / 'config')} names none")
-        write_key(file, os.path.relpath(corpus, file.parent), key)
+        write_key(root, file, os.path.relpath(corpus, file.parent), key)
         done.append(f"made its key {key}, trusted in {projects.shown(file)}")
     else:
         before = author(corpus)
@@ -192,7 +203,7 @@ def init(project: projects.Project | None, root: Path, backup_name: str | None,
         if key != before:
             done.append(f"rebuilt the store around {projects.shown(key_file)}: {key}")
         if not trusted:
-            write_key(file, os.path.relpath(corpus, file.parent), key)
+            write_key(root, file, os.path.relpath(corpus, file.parent), key)
             done.append(f"trusted {key} in {projects.shown(file)}")
         elif key != trusted:
             raise CorpusError(f"{projects.shown(key_file)} is the key {key}, and {projects.shown(file)} "
