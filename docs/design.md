@@ -174,6 +174,19 @@ a signed publet in git, its renders in storage.
   then make the same bytes. A PDF approved before this cannot be rebuilt
   byte for byte, so `compare` checks what a reader sees: pages, text and
   pixels.
+- **Pinned fonts and a dated build.** A render depended on the machine
+  twice. Typst falls back to system fonts for glyphs its own fonts lack (the
+  verdict symbols ✓ ✗ ◪), and a laptop that gained FreeSans reflowed every
+  line of a fact-check approved with DejaVu Sans. So typst runs with
+  `--ignore-system-fonts` and pubdoc's `fonts/` (README there: the fonts,
+  their packages and licences), beside its own Libertinus, New Computer
+  Modern and DejaVu Sans Mono. And lapreprint prints the doc's date, which
+  MyST took to be the day of the build: `build --date`, which approve passes,
+  makes it the approval date in the generated myst.yml unless a part sets
+  its own. A part's own date wins because MyST merges a page's frontmatter
+  over the project's, not because of any pubdoc code. With both, the killer-whale fact-check (both layouts) and the
+  EHAAL plan rebuild as the PDFs approved in September, pages, text and
+  pixels.
 - **Driving pub.** pubdoc writes the publet's source and runs `pub build`
   and `pub publish <slug>` in the corpus, as pubrel does, and reads what it
   published from `corpus.lock`. It refuses any pub but 0.4.

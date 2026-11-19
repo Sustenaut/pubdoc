@@ -48,6 +48,7 @@ Feature: Approving a doc makes a signed version, its renders in storage
     When I run pubdoc "approve" "job-applications/globex" "--date" "2026-09-22" "--rebuilt-from" "3f9e1c2"
     Then it succeeds
     And typst was asked for the creation time 1790035200
+    And "job-applications/globex/build/src/globex.letter/myst.yml" contains "date: '2026-09-22'"
     And "job-applications/globex/versions/versions.yml" contains "approved: '2026-09-22'"
     And "job-applications/globex/versions/versions.yml" contains "rebuilt_from: 3f9e1c2"
     And "corpus/publets/doc.job-applications.globex.engineering/publet.json" contains "rebuilt from the sources of commit 3f9e1c2"
