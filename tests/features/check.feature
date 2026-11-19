@@ -111,3 +111,11 @@ Feature: pubdoc check validates every document project in a repository
     When I run pubdoc "check"
     Then the exit code is 1
     And stderr mentions "job-applications/acme/cv.reserch.md: no variant 'reserch' (engineering, research)"
+
+  Scenario: A repository's pubdoc.yml is checked against its schema too
+    Given the repository is a git work tree
+    And the file "pubdoc.yml" reads "storage: {tenant: Documents}\ncorpus: {path: corpus, trust: me}"
+    When I run pubdoc "check"
+    Then the exit code is 1
+    And stderr mentions "pubdoc.yml: corpus: Additional properties are not allowed ('trust'"
+    And stderr mentions "pubdoc.yml: storage.tenant: 'Documents' is not a name"

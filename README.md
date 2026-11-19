@@ -1,6 +1,6 @@
 # pubdoc
 
-Check, build, preview and approve document projects written in MyST
+Check, build, preview, approve and version document projects written in MyST
 Markdown, as Typst PDFs and other formats, with review and approval in
 [review-builder](https://github.com/Sustenaut/review-builder). A project
 is one `project.yml` naming the parts a purpose needs (a letter and a
@@ -64,6 +64,8 @@ application) and holds a MyST file per part:
 <repo>/
 ├── pubdoc                      the launcher
 ├── requirements-pubdoc.txt     the pubdoc release the launcher runs
+├── pubdoc.yml                  optional: every project's storage tenant and corpus
+├── corpus/                     signs version publets (its .publet/ untracked)
 ├── publets/                    one Markdown file per linked concept
 ├── publets-local.json          short name -> publet id, shared by every doc
 └── job-applications/           one project
@@ -76,7 +78,7 @@ application) and holds a MyST file per part:
         ├── letter.research.md  replaces letter.md for the research variant
         ├── doc.yml             optional: only narrows project.yml
         ├── refs.bib            optional bibliography
-        ├── versions/           approved, dated PDFs (committed)
+        ├── versions/versions.yml  its versions: written by approve (committed)
         └── build/              everything pubdoc builds (ignores itself)
 ```
 
@@ -172,7 +174,11 @@ Run from anywhere in the repository; paths are relative to where you are:
 ./pubdoc build --all                                    # every doc here, reporting each that fails
 ./pubdoc build <project>/<doc> --variant V --layout L   # one render
 ./pubdoc preview <project>/<doc> [variant] [layout] [--port N]
-./pubdoc approve <project>/<doc> [variant] [layout]     # copy a PDF into versions/, dated
+./pubdoc approve <project>/<doc> [--variant V]          # sign a version: renders to storage
+./pubdoc versions <project>/<doc>                       # its versions, newest first
+./pubdoc fetch <project>/<doc> [N] [--layout L]         # download a version's renders, checked
+./pubdoc verify [path] [--remote]                       # versions.yml against the signed publets
+./pubdoc compare a.pdf b.pdf                            # the same document? pages, text, pixels
 ./pubdoc open <project>/<doc> [--port N]                # a live Curvenote site of it
 ./pubdoc variants <project>/<doc>                       # its variants, as doc.yml narrows them
 ./pubdoc new-project <path> [--purpose "..."]           # a project.yml and a first doc
@@ -196,12 +202,67 @@ LinkedIn exporter. `build --all` goes on past a doc that fails, prints
 `built N of M docs` (naming the ones that failed) and exits non-zero if
 any did.
 
-`preview` and `approve` act on one PDF render; leave out the variant and
-layout when the doc has only one. `preview` writes review-builder's
-configuration into `<doc>/build/review-builder.yaml` and runs it there;
-its Accept button runs `approve`, which copies the PDF into
-`<doc>/versions/<doc>_<variant>_<layout>_<date>.pdf` and prints that path.
-Commit the new `versions/*.pdf` afterwards.
+`preview` acts on one PDF render; leave out the variant and layout when
+the doc has only one. It writes review-builder's configuration into
+`<doc>/build/review-builder.yaml` and runs it there; its Accept button runs
+`approve` for that variant.
+
+## Versions
+
+A version of a doc is a signed publet, one lineage per doc and variant
+(slug `doc.<project>.<doc>.<variant>`), so each approval supersedes the one
+before. Its renders are in storage, by their SHA-256; git holds the signed
+objects and an index:
+
+- `pubdoc approve <project>/<doc>` refuses uncommitted changes to the
+  project or the corpus, and anyone the project's `roles.reviewers` does
+  not name (the approver is `$PUBDOC_APPROVER`, else the GitHub login `gh`
+  is signed in as). It builds every layout of each variant, each PDF
+  stamped with the approval date (typst's `--creation-timestamp`, midnight
+  UTC), so the same sources and tools rebuild the same bytes; uploads every
+  render to the storage tenant; writes the version publet's source into
+  `corpus/publets/<slug>/publet.json`; has `pub build` and `pub publish`
+  sign it into `corpus/objects/`; and records the version in
+  `<doc>/versions/versions.yml`. Commit both. `--date` and
+  `--rebuilt-from COMMIT` record a version rebuilt from an earlier commit's
+  sources, to replace a PDF approved before versions existed.
+- The publet's claims: `#identity` (doc, variant, version, approval date
+  and approver, pubdoc release, commit), `#sources` (every file it was
+  built from, by path and SHA-256) and `#renders` (layout, format, SHA-256,
+  size and address of each render).
+- `pubdoc versions` lists them; `pubdoc fetch` downloads a render and
+  refuses it unless its SHA-256 is the recorded one.
+- `pubdoc verify` has `pub` check the corpus (every generation signed by
+  its key, every object its hash), checks each versions.yml says what its
+  signed claims say, and, with `--remote`, that storage still holds every
+  render with its checksum. Run it in CI.
+- `pubdoc compare a.pdf b.pdf` says whether two PDFs are the same
+  document: page count, text (pdftotext) and each page's pixels
+  (pdftoppm, 72 dpi). Use it to check a rebuild against an older PDF.
+
+Where they go comes from the project's `project.yml`, else the
+repository's `pubdoc.yml`:
+
+```yaml
+# pubdoc.yml, at the repository's root
+storage: {tenant: documents}                    # url: https://storage.sustenaut.eu
+corpus: {path: corpus, key: pub:sha2-256:...}   # path from the root; key: the one verify trusts
+
+# <project>/project.yml overrides either
+storage: {tenant: publet-design}
+corpus: {path: corpus}                          # from the project: <project>/corpus
+```
+
+Storage takes `$PUBDOC_STORAGE_TOKEN`, else `$GITHUB_TOKEN`, else `gh auth
+token`: a token that may push to the tenant's repository. Signing and
+verifying need publet's `pub` 0.4 (`cargo install --locked --git
+https://github.com/Sustenaut/publet --tag v0.4.0 publet-cli`); comparing
+needs poppler.
+
+Setting a corpus up is a step for its key's owner, once: `pub corpus init`
+in it, `pub sign --generate-key --principal=human`, `.publet/` in
+`.gitignore`, the key in `pubrules.json`'s `signing_keys` and backed up with
+`./pubsec signing-key`, and its key id in `pubdoc.yml`'s `corpus.key`.
 
 ## Links with `{pub}`
 

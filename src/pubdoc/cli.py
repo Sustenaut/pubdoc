@@ -25,7 +25,7 @@ from pathlib import Path
 
 import yaml
 
-from . import projects
+from . import compare, projects, registry, settings, storage, versions
 from .projects import BUILD, VERSIONS, Doc, Problem, Project, Render
 
 CURVENOTE_VERSION = "0.17.2"
@@ -187,11 +187,15 @@ def cmd_check(args: argparse.Namespace) -> int:
     problems: list[Problem] = []
     notes: set[str] = set()
     docs = 0
+    roots = set()
     for file in files:
         project, found, said = load_checked(file)
         problems.extend(found)
         notes.update(said)
         docs += len(project.docs) if project else 0
+        roots.add(projects.repo_root(file.parent).resolve())
+    for root in sorted(roots):
+        settings.root_config(root, problems)
     for note in sorted(notes):
         print(f"note: {note}")
     if problems:
@@ -304,9 +308,11 @@ def prepare(doc: Doc) -> Path:
     return install_templates(out / TEMPLATES)
 
 
-def build(doc: Doc, typst: str, variant: str | None = None, layout: str | None = None) -> str | None:
+def build(doc: Doc, typst: str, variant: str | None = None, layout: str | None = None,
+          timestamp: int | None = None) -> str | None:
     """Build every render of `doc`, or those named: None when all were
-    built, else why one was not."""
+    built, else why one was not. With `timestamp`, each PDF says it was made
+    then, so the same sources and tools make the same bytes."""
     renders = doc.renders(variant, layout)
     if not renders:
         return f"{doc.label} has nothing to build for {variant or 'any variant'} and {layout or 'any layout'}"
@@ -316,7 +322,8 @@ def build(doc: Doc, typst: str, variant: str | None = None, layout: str | None =
             return f"curvenote build failed for {doc.label}"
         for r in group:
             typ = r.typst_source
-            if subprocess.call([typst, "compile", str(typ), str(r.output)]) != 0:
+            stamp = ["--creation-timestamp", str(timestamp)] if timestamp is not None else []
+            if subprocess.call([typst, "compile", *stamp, str(typ), str(r.output)]) != 0:
                 return f"typst compile failed for {typ}"
             print(f"built {projects.shown(r.output)}")
     for r in renders:
@@ -385,9 +392,8 @@ def cmd_open(args: argparse.Namespace) -> int:
 
 
 def review_config(r: Render) -> dict:
-    """review-builder's configuration for one render. review-builder serves
-    only what is inside its directory, build/, so build/versions links to
-    the doc's versions/ for the Accept button's link to resolve."""
+    """review-builder's configuration for one render. Its Accept button runs
+    approve, which prints the approved render's address in storage."""
     doc, out = r.doc, r.doc.path / BUILD
     watched = [f for d in [doc.path] + [doc.project.shared_dir(p) for p in doc.project.config["parts"]]
                if d and d.is_dir() for f in sorted(d.iterdir())
@@ -400,7 +406,7 @@ def review_config(r: Render) -> dict:
         "build_cmd": [*pubdoc, "build", str(doc.path), "--variant", r.variant, "--layout", r.layout],
         "pdf_path": str(r.output.relative_to(out)),
         "preview_dirname": str(Path("preview") / r.variant / r.layout),
-        "commit_cmd": [*pubdoc, "approve", str(doc.path), r.variant, r.layout],
+        "commit_cmd": [*pubdoc, "approve", str(doc.path), "--variant", r.variant, "--show", r.layout],
     }
 
 
@@ -412,26 +418,154 @@ def cmd_preview(args: argparse.Namespace) -> int:
     write_if_changed(out / "review-builder.yaml",
                      ("# Written by pubdoc preview: do not edit.\n"
                       + yaml.safe_dump(review_config(r), sort_keys=False)).encode())
-    link = out / VERSIONS
-    if not link.is_symlink():
-        link.symlink_to(Path("..") / VERSIONS, target_is_directory=True)
     preview = need("review-builder-preview", "install review-builder: pipx install ~/git/review-builder")
     os.chdir(out)
     os.execv(preview, [preview, *([args.port] if args.port else [])])
     return 0  # pragma: no cover - execv does not return
 
 
+def git(where: Path, *args: str) -> str:
+    done = subprocess.run(["git", "-C", str(where), *args], capture_output=True, text=True)
+    if done.returncode != 0:
+        die(f"git {' '.join(args)} failed: {done.stderr.strip()}")
+    return done.stdout.strip()
+
+
+def approver(doc: Doc) -> str:
+    """Who approves: $PUBDOC_APPROVER, else the GitHub login gh is signed in
+    as. When the project names reviewers, it must be one of them."""
+    who = os.environ.get("PUBDOC_APPROVER")
+    if not who and shutil.which("gh"):
+        done = subprocess.run(["gh", "api", "user", "--jq", ".login"], capture_output=True, text=True)
+        who = done.stdout.strip() if done.returncode == 0 else None
+    if not who:
+        die("cannot tell who approves: sign in with `gh auth login`, or set PUBDOC_APPROVER")
+    reviewers = doc.project.config.get("roles", {}).get("reviewers")
+    if reviewers and who not in reviewers:
+        die(f"{who} is not one of {projects.shown(doc.project.file)}'s reviewers ({', '.join(reviewers)})")
+    return who
+
+
 def cmd_approve(args: argparse.Namespace) -> int:
-    r = pick(one_doc(args.name), args.variant, args.layout)
-    if not r.output.is_file():
-        die(f"{projects.shown(r.output)} not built yet; run: pubdoc build {r.doc.label}")
-    name = f"{r.doc.name}_{r.variant}_{r.layout}_{datetime.date.today().isoformat()}.pdf"
-    (r.doc.path / VERSIONS).mkdir(exist_ok=True)
-    shutil.copyfile(r.output, r.doc.path / VERSIONS / name)
-    # review-builder's Accept button reads this path, relative to build/,
-    # where versions/ links to the doc's; it holds from the doc's directory too.
-    print(Path(VERSIONS) / name)
+    """Build, upload, sign and record a version of each variant asked for."""
+    doc = one_doc(args.name)
+    variants = [args.variant] if args.variant else doc.variants()
+    for v in variants:
+        if v not in doc.variants():
+            die(f"{doc.label} has no variant {v} ({', '.join(doc.variants())})")
+    conf = settings.of(doc.project)
+    root = conf.root
+    if not args.allow_dirty:
+        dirty = git(root, "status", "--porcelain", "--untracked-files=all", "--",
+                    str(doc.project.path), str(conf.corpus))
+        if dirty:
+            die(f"commit these first, so the version names the sources it was built from:\n{dirty}")
+    for step in doc.review():
+        for checker in step.get("automatic", []):
+            if checker != "build" and not registry.CHECKERS[checker].implemented:
+                print(f"note: checker {checker!r} is not implemented yet; approving without it")
+    date = args.date or datetime.date.today().isoformat()
+    approval = versions.Approval(approver=approver(doc), date=date, commit=git(root, "rev-parse", "HEAD"),
+                                 rebuilt_from=args.rebuilt_from or "", pubdoc=version())
+    typst = resolve_typst()
+    shown = None
+    for v in variants:
+        renders = doc.renders(v)
+        if failure := build(doc, typst, v, timestamp=approval.timestamp):
+            die(failure)
+        try:
+            entry = versions.publish(doc, v, approval, renders, doc_files(doc))
+        except (versions.VersionError, storage.StorageError) as e:
+            die(str(e))
+        print(f"approved version {entry['version']} of {doc.label} ({v}): {entry['publet']}")
+        for layout, render in entry["renders"].items():
+            print(f"  {layout}: {render['url']}")
+            if layout == args.show or (shown is None and not args.show):
+                shown = render["url"]
+    print(f"commit {projects.shown(versions.index_path(doc))} and {projects.shown(conf.corpus)}")
+    # review-builder's Accept button links to the last line printed.
+    if shown:
+        print(shown)
     return 0
+
+
+def cmd_versions(args: argparse.Namespace) -> int:
+    doc = one_doc(args.name)
+    index = versions.read_index(doc)
+    if not index["versions"]:
+        print(f"{doc.label} has no versions yet")
+        return 0
+    for entry in index["versions"]:
+        rebuilt = f", rebuilt from {entry['rebuilt_from']}" if entry.get("rebuilt_from") else ""
+        print(f"{entry['variant']} v{entry['version']}  {entry['approved']}  by {entry['approved_by']}"
+              f"  {entry['publet']}{rebuilt}")
+        for layout, render in entry["renders"].items():
+            print(f"    {layout}: {render['url']}")
+    return 0
+
+
+def cmd_fetch(args: argparse.Namespace) -> int:
+    doc = one_doc(args.name)
+    entries = [e for e in versions.read_index(doc)["versions"]
+               if (not args.variant or e["variant"] == args.variant)
+               and (args.version is None or int(e["version"]) == args.version)]
+    if not entries:
+        die(f"{doc.label} has no such version")
+    entry = entries[0]
+    layouts = [args.layout] if args.layout else list(entry["renders"])
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    for layout in layouts:
+        render = entry["renders"].get(layout)
+        if not render:
+            die(f"version {entry['version']} of {doc.label} has no {layout} render "
+                f"({', '.join(entry['renders'])})")
+        name = Path(render["url"]).name
+        try:
+            target = storage.save(render["url"], render["sha256"], out / name)
+        except storage.StorageError as e:
+            die(str(e))
+        print(target)
+    return 0
+
+
+def cmd_verify(args: argparse.Namespace) -> int:
+    files = projects.find(Path(args.path))
+    problems, checked, corpora = [], 0, set()
+    for file in files:
+        project, found, _ = load_checked(file)
+        if not project:
+            problems.extend(str(p) for p in found)
+            continue
+        for doc in project.docs:
+            if not versions.index_path(doc).is_file():
+                continue
+            corpus = settings.of(project).corpus
+            try:
+                if corpus not in corpora:
+                    versions.verify_corpus(corpus)
+                    corpora.add(corpus)
+                problems.extend(versions.verify_doc(doc, args.remote))
+            except versions.VersionError as e:
+                problems.append(f"{doc.label}: {e}")
+            checked += 1
+    for problem in problems:
+        print(f"pubdoc: {problem}", file=sys.stderr)
+    if problems:
+        return 1
+    print(f"verified {checked} doc(s)' versions against {len(corpora)} signed corpus(es)"
+          + (", and every render in storage" if args.remote else ""))
+    return 0
+
+
+def cmd_compare(args: argparse.Namespace) -> int:
+    try:
+        report = compare.compare(Path(args.first), Path(args.second))
+    except compare.CompareError as e:
+        die(str(e))
+    for line in report.lines():
+        print(line)
+    return 0 if report.same else 1
 
 
 def cmd_linkedin(args: argparse.Namespace) -> int:
@@ -565,7 +699,24 @@ def parser() -> argparse.ArgumentParser:
         ("--layout", {"help": "only this layout"}))
     add("preview", cmd_preview, "review-builder's watch, build and Accept loop over one PDF render",
         doc, variant, layout, port)
-    add("approve", cmd_approve, "copy one PDF render into the doc's versions/, dated", doc, variant, layout)
+    add("approve", cmd_approve, "build each variant of a doc, upload its renders to storage, sign a version "
+        "publet for it and record it in <doc>/versions/versions.yml", doc,
+        ("--variant", {"help": "only this variant"}),
+        ("--show", {"metavar": "LAYOUT", "help": "print this layout's address last, for review-builder"}),
+        ("--date", {"help": "the approval date, YYYY-MM-DD (default: today)"}),
+        ("--rebuilt-from", {"metavar": "COMMIT", "help": "the commit whose sources an earlier approved "
+                            "version was built from, for one rebuilt to replace it"}),
+        ("--allow-dirty", {"action": "store_true", "help": "approve with uncommitted changes"}))
+    add("versions", cmd_versions, "a doc's versions, newest first", doc)
+    add("fetch", cmd_fetch, "download a version's renders, checked against its publet", doc,
+        ("version", {"nargs": "?", "type": int, "help": "a version number (default: the latest)"}),
+        ("--variant", {"help": "this variant's versions"}),
+        ("--layout", {"help": "only this layout"}),
+        ("--out", {"default": ".", "help": "the directory to save into (default: here)"}))
+    add("verify", cmd_verify, "check every versions.yml against its corpus's signed publets", where,
+        ("--remote", {"action": "store_true", "help": "and that every render in storage has its checksum"}))
+    add("compare", cmd_compare, "whether two PDFs are the same document: pages, text, pixels",
+        ("first", {"help": "a PDF"}), ("second", {"help": "another PDF"}))
     add("linkedin", cmd_linkedin, "a CV's plain-text export for LinkedIn",
         ("index", {"help": "the CV's Markdown file"}))
     add("init", cmd_init, f"write ./pubdoc and {PIN}, which pins this release for it to run with uvx")

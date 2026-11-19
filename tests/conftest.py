@@ -8,7 +8,6 @@ Curvenote, typst or ~/git/typst build is ever reached.
 
 from __future__ import annotations
 
-import datetime
 import os
 import shutil
 import stat
@@ -25,8 +24,11 @@ echo "$(basename "$0")|$PWD|$*" >> "{log}"
 {body}
 """
 NPX = 'if [ -n "$PUBDOC_TEST_FAIL" ]; then exit 3; fi\n'
-TYPST = ('if [ -n "$PUBDOC_TEST_TYPST_FAIL" ] && [ "$2" = "$PUBDOC_TEST_TYPST_FAIL" ]; then exit 4; fi\n'
-         'mkdir -p "$(dirname "$3")" && touch "$3"\n')
+# typst compile [--creation-timestamp N] SOURCE OUTPUT: the output names
+# the timestamp, so a scenario can see which one a build asked for.
+TYPST = ('last=""; for a; do last="$a"; done\n'
+         'for a; do if [ -n "$PUBDOC_TEST_TYPST_FAIL" ] && [ "$a" = "$PUBDOC_TEST_TYPST_FAIL" ]; then exit 4; fi; done\n'
+         'mkdir -p "$(dirname "$last")" && echo "%PDF-1.7 typst $*" > "$last"\n')
 
 
 @pytest.fixture
@@ -52,7 +54,8 @@ def fakes(tmp_path):
 def env(tmp_path, fakes):
     node = shutil.which("node")
     path = [str(fakes)] + ([str(Path(node).parent)] if node else []) + ["/usr/bin", "/bin"]
-    return {"PATH": os.pathsep.join(path), "HOME": str(tmp_path)}
+    return {"PATH": os.pathsep.join(path), "HOME": str(tmp_path),
+            "PUBDOC_TEST_LOG": str(tmp_path / "calls.log")}
 
 
 def pubdoc():
@@ -150,7 +153,3 @@ def contains(repo, path, text):
 @then(parsers.parse('"{path}" does not contain "{text}"'))
 def lacks(repo, path, text):
     assert text not in (repo / path).read_text()
-
-
-def today_pdf(prefix: str) -> str:
-    return f"{prefix}_{datetime.date.today().isoformat()}.pdf"

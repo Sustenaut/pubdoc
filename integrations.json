@@ -1,7 +1,7 @@
 {
   "uses": [
     {"plugin": "github.app-token", "paths": [".github/workflows/main.yml", ".github/workflows/pr.yml"], "mode": "required"},
-    {"plugin": "github.repo-ops", "paths": [".github/workflows/wheel.yml"], "mode": "required"},
+    {"plugin": "github.repo-ops", "paths": [".github/workflows/wheel.yml", "src/pubdoc/cli.py", "src/pubdoc/storage.py"], "mode": "required"},
     {"plugin": "sonarcloud.scan", "paths": [".github/workflows/main.yml", ".github/workflows/pr.yml"], "mode": "required"}
   ],
   "own_hosts": ["sustenaut.eu"],
