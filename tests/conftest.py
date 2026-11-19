@@ -1,155 +1,90 @@
-"""pubdoc's suite. The steps it does not define here (`it succeeds`, `it
-prints ...`) are pubrules's plugin's.
+"""pubdoc's suite, on pubtest's steps. What it adds is its own domain: the
+example project, an edit to one of its files, an approved PDF named for
+today, and a stand-in that notes the directory it ran in.
 
-Every scenario runs in a scratch repository, with stand-ins for npx and
-typst first on PATH and HOME pointed at the scratch directory, so no real
-Curvenote, typst or ~/git/typst build is ever reached.
+Every scenario runs in pubtest's scratch directory, with pubtest's stand-ins
+for npx, typst, uvx and review-builder-preview first on PATH where it runs
+them, so no real Curvenote, typst or review-builder is ever reached. pubdoc
+is the program under test from PUBDOC_BIN_DIR: the one beside the Python
+running this suite (`make venv`'s), unless PUBDOC_BIN_DIR names another.
 """
 
 from __future__ import annotations
 
 import datetime
 import os
+import shlex
 import shutil
-import stat
-import subprocess
 import sys
 from pathlib import Path
 
-import pytest
+from pubtest.steps.programs import run_command
+from pubtest.steps.standins import standins
 from pytest_bdd import given, parsers, then, when
 
-# Each stand-in appends its working directory and arguments to calls.log.
-STAND_IN = """#!/bin/sh
-echo "$(basename "$0")|$PWD|$*" >> "{log}"
-{body}
-"""
-NPX = 'if [ -n "$PUBDOC_TEST_FAIL" ]; then exit 3; fi\n'
-TYPST = ('if [ -n "$PUBDOC_TEST_TYPST_FAIL" ] && [ "$2" = "$PUBDOC_TEST_TYPST_FAIL" ]; then exit 4; fi\n'
-         'mkdir -p "$(dirname "$3")" && touch "$3"\n')
-
-
-@pytest.fixture
-def repo(tmp_path):
-    root = tmp_path / "repo"
-    root.mkdir()
-    return root
-
-
-@pytest.fixture
-def fakes(tmp_path):
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    log = tmp_path / "calls.log"
-    for name, body in (("npx", NPX), ("typst", TYPST), ("review-builder-preview", ""), ("uvx", "")):
-        path = bin_dir / name
-        path.write_text(STAND_IN.format(log=log, body=body))
-        path.chmod(path.stat().st_mode | stat.S_IXUSR)
-    return bin_dir
-
-
-@pytest.fixture
-def env(tmp_path, fakes):
-    node = shutil.which("node")
-    path = [str(fakes)] + ([str(Path(node).parent)] if node else []) + ["/usr/bin", "/bin"]
-    return {"PATH": os.pathsep.join(path), "HOME": str(tmp_path)}
-
-
-def pubdoc():
-    """The `pubdoc` installed beside the Python running this suite."""
-    found = shutil.which("pubdoc", path=str(Path(sys.executable).parent))
-    assert found, "pubdoc is not installed in this environment; run `make venv`"
-    return found
-
-
-def calls(tmp_path) -> list[tuple[str, str, str]]:
-    log = tmp_path / "calls.log"
-    lines = log.read_text().splitlines() if log.exists() else []
-    return [tuple(line.split("|", 2)) for line in lines]
-
+os.environ.setdefault("PUBDOC_BIN_DIR", str(Path(sys.executable).parent))
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 
 
+def scratch(pubtest_ctx) -> Path:
+    return pubtest_ctx.directory or Path.cwd()
+
+
 @given("the example project")
-def example_project(repo):
+def example_project(pubtest_ctx):
     """examples/: job-applications (a letter and a CV starting from a shared
-    base CV, two variants; docs acme and globex) and the publets its CV links to."""
+    base CV, two variants; docs acme and globex) and the publets its CV
+    links to, without anything built or approved."""
+    root = scratch(pubtest_ctx)
     for item in EXAMPLES.iterdir():
         if item.is_dir():
-            shutil.copytree(item, repo / item.name, ignore=shutil.ignore_patterns("build", "versions"))
+            shutil.copytree(item, root / item.name, ignore=shutil.ignore_patterns("build", "versions"))
         else:
-            shutil.copy(item, repo / item.name)
-
-
-@given("the repository is a git work tree")
-def git_repo(repo):
-    subprocess.run(["git", "init", "-q", str(repo)], check=True)
-
-
-@given(parsers.parse('the file "{path}" reads:'))
-def file_reads_block(repo, path, docstring):
-    target = repo / path
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(docstring + "\n")
+            shutil.copy(item, root / item.name)
 
 
 @given(parsers.parse('in "{path}" "{old}" becomes "{new}"'))
-def replaced(repo, path, old, new):
-    target = repo / path
-    text = target.read_text()
+def replaced(pubtest_ctx, path, old, new):
+    """One edit to a file, `\\n` a newline: pubtest writes whole files only."""
+    target = scratch(pubtest_ctx) / path
+    text = target.read_text(encoding="utf-8")
     old, new = old.replace("\\n", "\n"), new.replace("\\n", "\n")
     assert old in text, f"{old!r} is not in {path}"
-    target.write_text(text.replace(old, new))
+    target.write_text(text.replace(old, new), encoding="utf-8")
 
 
-@given(parsers.parse('the file "{path}" is gone'))
-def gone(repo, path):
-    (repo / path).unlink()
+@given(parsers.parse('a stand-in "{name}" that notes where it runs'))
+def standin_noting(pubtest_ctx, tmp_path, name):
+    """pubtest's stand-in, whose log of each run also holds its working
+    directory. pubtest has no step for where a program ran."""
+    found = standins(pubtest_ctx, tmp_path)
+    found.add(name)
+    script = found.bin / name
+    text = script.read_text(encoding="utf-8")
+    noted = text.replace('"input": read}', '"input": read, "cwd": __import__("os").getcwd()}')
+    assert noted != text, "pubtest's stand-in no longer logs its runs as this step expects"
+    script.write_text(noted, encoding="utf-8")
+    os.environ["PATH"] = found.path()
 
 
-@given(parsers.parse('the file "{path}" reads "{text}"'))
-def file_reads(repo, path, text):
-    target = repo / path
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(text.replace("\\n", "\n") + "\n")
+@when(parsers.parse('from "{where}" I run "{command}"'), target_fixture="result")
+def run_from(pubtest_ctx, where, command):
+    """pubtest's `I run`, in a directory of the scratch directory."""
+    pubtest_ctx.acting()
+    home = pubtest_ctx.directory
+    pubtest_ctx.directory = scratch(pubtest_ctx) / where
+    try:
+        return run_command(pubtest_ctx, command, None)
+    finally:
+        pubtest_ctx.directory = home
 
 
-@given("no typst is installed")
-def no_typst(fakes):
-    (fakes / "typst").unlink()
-
-
-@given("Curvenote fails")
-def curvenote_fails(env):
-    env["PUBDOC_TEST_FAIL"] = "1"
-
-
-@when(parsers.re(r'I run pubdoc (?P<args>(?:"[^"]*" ?)+?)(?: in "(?P<where>[^"]*)")?$'),
-      target_fixture="result")
-def run_pubdoc(repo, run, env, args, where):
-    argv = args.strip().strip('"').split('" "')
-    return run(pubdoc(), *argv, cwd=repo / (where or ""), env=env)
-
-
-@then(parsers.parse('"{path}" exists'))
-def exists(repo, path):
-    assert (repo / path).exists(), f"{path} does not exist"
-
-
-@then(parsers.parse('"{path}" does not exist'))
-def does_not_exist(repo, path):
-    assert not (repo / path).exists(), f"{path} exists"
-
-
-@then(parsers.parse('"{path}" contains "{text}"'))
-def contains(repo, path, text):
-    assert text in (repo / path).read_text()
-
-
-@then(parsers.parse('"{path}" does not contain "{text}"'))
-def lacks(repo, path, text):
-    assert text not in (repo / path).read_text()
+@then(parsers.re(r'"(?P<name>[^"]+)" ran in "(?P<where>[^"]+)" with (?:"(?P<args>[^"]+)"|no arguments)'))
+def ran_in(pubtest_ctx, name, where, args):
+    want = (os.path.realpath(scratch(pubtest_ctx) / where), shlex.split(args or ""))
+    runs = [(os.path.realpath(e.get("cwd", "")), e["args"]) for e in pubtest_ctx.standins.entries(name)]
+    assert want in runs, f"{name} ran {runs}"
 
 
 def today_pdf(prefix: str) -> str:

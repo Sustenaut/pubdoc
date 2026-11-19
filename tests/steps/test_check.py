@@ -1,4 +1,4 @@
-"""Steps for `pubdoc check` and doc.yml narrowing: all shared, in conftest and pubrules's plugin."""
+"""Steps for `pubdoc check` and doc.yml narrowing: all of them conftest's and pubtest's."""
 
 from __future__ import annotations
 

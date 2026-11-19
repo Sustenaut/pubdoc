@@ -6,11 +6,14 @@ import json
 
 from pytest_bdd import given, parsers, scenarios
 
+from conftest import scratch
+
 scenarios("linkedin.feature")
 
 
 @given(parsers.parse('a publet "{name}" with id {pid:d} reading "{text}"'))
-def publet(repo, name, pid, text):
+def publet(pubtest_ctx, name, pid, text):
+    repo = scratch(pubtest_ctx)
     (repo / "publets").mkdir(exist_ok=True)
     (repo / "publets" / f"{name}.md").write_text(
         f"---\nid: {pid}\nurl: https://example.org/{name}\ntext: {text}\n---\n\nA synopsis.\n")

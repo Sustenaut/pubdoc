@@ -6,10 +6,12 @@ Feature: A doc.yml can only narrow its project
   variant and the two PDF layouts.
 
   Background:
-    Given the example project
+    Given a scratch directory
+    And the program under test is "pubdoc"
+    And the example project
 
   Scenario: A doc that narrows and tightens checks
-    Given the file "job-applications/globex/doc.yml" reads:
+    Given a file "job-applications/globex/doc.yml" holding:
       """
       variants: [engineering]
       layouts: [letter-pdf, cv-pdf]
@@ -27,12 +29,12 @@ Feature: A doc.yml can only narrow its project
           variants: [engineering]
           readers: named
       """
-    When I run pubdoc "check"
+    When I run "pubdoc check"
     Then it succeeds
 
   Scenario Outline: A doc.yml that loosens its project is refused
-    Given the file "job-applications/globex/doc.yml" reads "<doc>"
-    When I run pubdoc "check"
+    Given a file "job-applications/globex/doc.yml" holding "<doc>"
+    When I run "pubdoc check"
     Then the exit code is 1
     And stderr mentions "job-applications/globex/doc.yml: <message>"
 
@@ -52,7 +54,7 @@ Feature: A doc.yml can only narrow its project
 
   Scenario: A publication narrower than the project's in one way but wider in another is refused
     Given in "job-applications/project.yml" "    readers: named" becomes "    variants: [engineering]\n    readers: named"
-    And the file "job-applications/acme/doc.yml" reads "publish: [{place: storage, layouts: [cv-pdf], variants: [research], readers: named}]"
-    When I run pubdoc "check"
+    And a file "job-applications/acme/doc.yml" holding "publish: [{place: storage, layouts: [cv-pdf], variants: [research], readers: named}]"
+    When I run "pubdoc check"
     Then the exit code is 1
     And stderr mentions "job-applications/acme/doc.yml: publish[0]: widens what project.yml publishes to 'storage': variants research"

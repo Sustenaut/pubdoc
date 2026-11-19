@@ -8,33 +8,35 @@ Feature: pubdoc check validates every document project in a repository
   shared/base-cv, variants engineering and research, docs acme and globex.
 
   Background:
-    Given the example project
+    Given a scratch directory
+    And the program under test is "pubdoc"
+    And the example project
 
   Scenario: The example project has no problems
-    When I run pubdoc "check"
+    When I run "pubdoc check"
     Then it succeeds
     And it prints "checked 1 project(s) with 2 doc(s): no problems"
 
   Scenario: Checkers and places named but not implemented yet are noted, not failed
-    When I run pubdoc "check"
+    When I run "pubdoc check"
     Then it succeeds
     And it prints "note: checker 'spelling' is not implemented yet"
     And it prints "note: place 'storage' is not implemented yet"
 
   Scenario: check from inside a doc checks the project it is in
-    When I run pubdoc "check" in "job-applications/acme"
+    When from "job-applications/acme" I run "pubdoc check"
     Then it succeeds
     And it prints "checked 1 project(s) with 2 doc(s)"
 
   Scenario: Without a project there is nothing to check
-    Given the file "job-applications/project.yml" is gone
-    When I run pubdoc "check" "job-applications"
+    Given the file "job-applications/project.yml" is removed
+    When I run "pubdoc check job-applications"
     Then the exit code is 1
     And stderr mentions "no project.yml in job-applications or below it"
 
   Scenario: In a git work tree, check finds the projects git knows of, wherever they are
-    Given the repository is a git work tree
-    And the file "nested/deeper/notes/project.yml" reads:
+    Given a git repository
+    And a file "nested/deeper/notes/project.yml" holding:
       """
       project: notes
       purpose: Notes
@@ -42,22 +44,22 @@ Feature: pubdoc check validates every document project in a repository
       variants: {all: {audience: Everyone}}
       layouts: {note-pdf: {part: note, template: lapreprint-typst, format: pdf}}
       """
-    And the file "nested/deeper/notes/one/note.md" reads "# One"
-    And the file "ignored/project.yml" reads "not: [valid"
-    And the file ".gitignore" reads "/ignored/"
-    When I run pubdoc "check"
+    And a file "nested/deeper/notes/one/note.md" holding "# One"
+    And a file "ignored/project.yml" holding "not: [valid"
+    And a file ".gitignore" holding "/ignored/"
+    When I run "pubdoc check"
     Then it succeeds
     And it prints "checked 2 project(s) with 3 doc(s): no problems"
 
   Scenario: A project.yml that is not YAML is named
-    Given the file "job-applications/project.yml" reads "parts: [unclosed"
-    When I run pubdoc "check"
+    Given a file "job-applications/project.yml" holding "parts: [unclosed"
+    When I run "pubdoc check"
     Then the exit code is 1
     And stderr mentions "job-applications/project.yml: is not valid YAML"
 
   Scenario Outline: A project.yml that breaks the schema says where
     Given in "job-applications/project.yml" "<old>" becomes "<new>"
-    When I run pubdoc "check"
+    When I run "pubdoc check"
     Then the exit code is 1
     And stderr mentions "job-applications/project.yml: <message>"
 
@@ -74,7 +76,7 @@ Feature: pubdoc check validates every document project in a repository
 
   Scenario Outline: A name project.yml refers to must exist
     Given in "job-applications/project.yml" "<old>" becomes "<new>"
-    When I run pubdoc "check"
+    When I run "pubdoc check"
     Then the exit code is 1
     And stderr mentions "job-applications/project.yml: <message>"
 
@@ -94,20 +96,20 @@ Feature: pubdoc check validates every document project in a repository
       | - step: approval                   | - step: checks                     | review[1].step: 'checks' is named twice                                  |
 
   Scenario: Every doc supplies each required part, for each of its variants
-    Given the file "job-applications/globex/letter.md" is gone
-    When I run pubdoc "check"
+    Given the file "job-applications/globex/letter.md" is removed
+    When I run "pubdoc check"
     Then the exit code is 1
     And stderr mentions "job-applications/globex: no letter.md or letter.engineering.md for required part 'letter' in variant 'engineering'"
 
   Scenario: A required part with no file and no shared part is missing
-    Given the file "job-applications/shared/base-cv/cv.md" is gone
-    And the file "job-applications/shared/base-cv/cv.research.md" is gone
-    When I run pubdoc "check"
+    Given the file "job-applications/shared/base-cv/cv.md" is removed
+    And the file "job-applications/shared/base-cv/cv.research.md" is removed
+    When I run "pubdoc check"
     Then the exit code is 1
     And stderr mentions "job-applications/acme: no cv.md or cv.engineering.md for required part 'cv' in variant 'engineering', and shared part shared/base-cv has none"
 
   Scenario: A variant override of no variant is a mistake
-    Given the file "job-applications/acme/cv.reserch.md" reads "# CV"
-    When I run pubdoc "check"
+    Given a file "job-applications/acme/cv.reserch.md" holding "# CV"
+    When I run "pubdoc check"
     Then the exit code is 1
     And stderr mentions "job-applications/acme/cv.reserch.md: no variant 'reserch' (engineering, research)"
