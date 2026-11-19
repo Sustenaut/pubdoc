@@ -59,7 +59,11 @@
         "required": ["part", "format"],
         "properties": {
           "part": {"$ref": "#/$defs/name"},
-          "template": {"$ref": "#/$defs/name"},
+          "template": {
+            "type": "string",
+            "pattern": "^(?:[a-z0-9][a-z0-9-]*|[^/].*/.*)$",
+            "description": "A template pubdoc carries, by name, or a template directory of this repository: a path relative to the project's directory, which a / marks (./templates/mine, ../templates/mine)."
+          },
           "exporter": {"$ref": "#/$defs/name"},
           "format": {"enum": ["pdf", "text", "html"]}
         },

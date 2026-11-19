@@ -114,10 +114,14 @@ publish:
   part, `shared/<name>/<part>.md`.
 - `variants`: audiences. A file `<part>.<variant>.md` replaces
   `<part>.md` for that variant, in a doc or in a shared part.
-- `layouts`: one part rendered by a template pubdoc carries
-  (`cv-sidebar`, `lapreprint-typst`, `charged-ieee`; each makes a PDF) or
-  by an exporter (`linkedin`, plain text), in a `format`: `pdf`, `text` or
-  `html`.
+- `layouts`: one part rendered by a template or by an exporter
+  (`linkedin`, plain text), in a `format`: `pdf`, `text` or `html`. A
+  template is one pubdoc carries, by name (`cv-sidebar`,
+  `lapreprint-typst`, `charged-ieee`), or a template directory of the
+  repository, by a path relative to the project's directory: a value with a
+  `/` is a path (`./templates/mine`, `../templates/mine`). A local template
+  must be inside the repository, hold the `template.yml` Curvenote needs and
+  be a Typst one (`kind: typst`); it makes a PDF.
 - `review`: ordered steps; each has automatic checkers (`build`, `links`,
   `spelling`, `private-info`), a human sign-off by a number of
   `roles.reviewers`, or both.

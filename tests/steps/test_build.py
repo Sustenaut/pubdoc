@@ -7,6 +7,7 @@ from pytest_bdd import given, parsers, scenarios, then
 from conftest import calls
 
 scenarios("build.feature")
+scenarios("templates.feature")
 
 
 @then(parsers.parse('npx was run in "{where}" with "{args}"'))

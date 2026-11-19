@@ -253,7 +253,9 @@ def myst_config(doc: Doc, root: Path, toc: list[Path], renders: list[Render]) ->
     if any((d / "publets-local.json").is_file() for d in [doc.path, *doc.path.parents]):
         plugins.insert(0, str(Path(templates) / "pub-plugin.mjs"))
     exports = [{"format": "typst",
-                "template": str(Path(templates) / r.spec["template"]),
+                "template": (os.path.relpath(local, root)
+                             if (local := doc.project.template_dir(r.spec["template"]))
+                             else str(Path(templates) / r.spec["template"])),
                 "output": os.path.relpath(r.typst_source, root)}
                for r in renders]
     myst = {"version": 1,

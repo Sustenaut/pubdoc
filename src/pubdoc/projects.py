@@ -39,6 +39,7 @@ NOT_DOCS = {SHARED, BUILD, VERSIONS, "node_modules"}
 # Directories a search without git never enters.
 SKIPPED = {BUILD, "node_modules", ".git", ".venv", "_build"}
 NAME_PATTERN = "^[a-z0-9][a-z0-9-]*$"
+TEMPLATE_PATTERN = "^(?:[a-z0-9][a-z0-9-]*|[^/].*/.*)$"
 READERS = ("named", "signed-in", "public")  # narrowest first
 
 
@@ -157,18 +158,33 @@ class Project:
     def name(self) -> str:
         return self.config.get("project", self.path.name)
 
+    def template_dir(self, template: str) -> Path | None:
+        """A local template's directory, or None for a template pubdoc carries."""
+        return (self.path / template).resolve() if is_path(template) else None
+
     def shared_dir(self, part: str) -> Path | None:
         spec = self.config.get("parts", {}).get(part, {})
         return self.path / spec["starts-from"] if "starts-from" in spec else None
 
 
+def is_path(template: str) -> bool:
+    """A layout's template is a path in the repository when it holds a /,
+    and the name of a template pubdoc carries when it does not."""
+    return "/" in template
+
+
 # Finding projects --------------------------------------------------------
+
+def git_root(start: Path) -> Path | None:
+    """The git work tree holding `start`, if it is in one."""
+    done = subprocess.run(["git", "-C", str(start), "rev-parse", "--show-toplevel"],
+                          capture_output=True, text=True)
+    return Path(done.stdout.strip()).resolve() if done.returncode == 0 else None
+
 
 def repo_root(start: Path) -> Path:
     """The git work tree holding `start`, else `start` itself."""
-    done = subprocess.run(["git", "-C", str(start), "rev-parse", "--show-toplevel"],
-                          capture_output=True, text=True)
-    return Path(done.stdout.strip()) if done.returncode == 0 else start
+    return git_root(start) or start
 
 
 def project_files(start: Path) -> list[Path]:
@@ -246,6 +262,9 @@ def describe(error) -> str:
         message = "needs automatic checkers, a human sign-off, or both"
     elif error.validator == "pattern" and error.validator_value == NAME_PATTERN:
         message = f"{error.instance!r} is not a name: use lowercase letters, digits and hyphens"
+    elif error.validator == "pattern" and error.validator_value == TEMPLATE_PATTERN:
+        message = (f"{error.instance!r} is neither a template name nor a path relative to the "
+                   "project (a path holds a /, and does not start with one)")
     elif error.validator == "pattern" and str(error.validator_value).startswith("^shared/"):
         message = f"{error.instance!r} is not shared/<name>"
     elif error.validator == "propertyNames":
@@ -313,7 +332,13 @@ def check(project: Project) -> tuple[list[Problem], list[str]]:
         where = f"layouts.{name}"
         if spec["part"] not in parts:
             problems.append(Problem(file, f"{where}.part: {missing('part', spec['part'], parts)}"))
-        if "template" in spec and spec["template"] not in templates:
+        if "template" in spec and is_path(spec["template"]):
+            if found := local_template_problem(project, spec["template"]):
+                problems.append(Problem(file, f"{where}.template: {found}"))
+            elif spec["format"] not in registry.TEMPLATE_FORMATS:
+                problems.append(Problem(file, f"{where}.format: {spec['template']} makes "
+                                        f"{', '.join(registry.TEMPLATE_FORMATS)}, not {spec['format']}"))
+        elif "template" in spec and spec["template"] not in templates:
             problems.append(Problem(file, f"{where}.template: {missing('template', spec['template'], templates)}"))
         elif "exporter" in spec and spec["exporter"] not in registry.EXPORTERS:
             problems.append(Problem(file, f"{where}.exporter: "
@@ -331,6 +356,30 @@ def check(project: Project) -> tuple[list[Problem], list[str]]:
     for doc in project.docs:
         problems.extend(doc_problems(doc, notes))
     return problems, sorted(notes)
+
+
+def local_template_problem(project: Project, template: str) -> str | None:
+    """Why a local template directory cannot be built with, if it cannot:
+    it must be inside the repository (outside a git work tree, anywhere), hold a template.yml (without one,
+    Curvenote takes the path for the name of a template to download) and
+    be a Typst template, the kind pubdoc builds."""
+    path = project.template_dir(template)
+    root = git_root(project.path)
+    if root and not path.is_relative_to(root):
+        return f"{template} is outside the repository ({shown(root)})"
+    if not path.is_dir():
+        return f"no directory {shown(path)}"
+    spec = path / "template.yml"
+    if not spec.is_file():
+        return (f"{shown(path)} has no template.yml, which Curvenote needs "
+                "to take a directory as a template")
+    try:
+        kind = (yaml.safe_load(spec.read_text(encoding="utf-8")) or {}).get("kind")
+    except (yaml.YAMLError, AttributeError):
+        return f"{shown(spec)} is not a YAML mapping"
+    if kind != "typst":
+        return f"{shown(spec)} is a {kind or 'kindless'} template; pubdoc builds Typst templates (kind: typst)"
+    return None
 
 
 def overrides(where: Path, parts, variants) -> list[Problem]:

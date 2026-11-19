@@ -64,6 +64,17 @@ Choices the model settles beyond the plan:
   template pubdoc carries is Typst, so makes `pdf`; `linkedin` makes
   `text`. `html` is in the schema but nothing makes it yet, so `check`
   refuses an `html` layout until something does.
+- **Local templates.** A layout's `template` holding a `/` is a path,
+  relative to the project's directory, to a template directory of the
+  repository; a bare name is one pubdoc carries. A `/` is the rule because
+  no carried template's name can hold one, so the two never collide, and
+  `./mine` and `../templates/mine` both read as paths. `check` refuses a
+  path outside the git work tree (anywhere is allowed outside one), a
+  directory without `template.yml` (without it, myst-templates takes the
+  path for the name of a template to download; see "A real pitfall" below)
+  and any kind but `typst`. `build` points the export at the directory
+  where it is, by a path relative to the staged project: Curvenote reads a
+  template outside its project, as it reads pubdoc's own in `build/templates/`.
 - **A human step's reviewer count** may not exceed the logins in
   `roles.reviewers`, or the step could never pass.
 
