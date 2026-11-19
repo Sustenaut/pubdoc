@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubdoc 0.1.2 is released as v0.1.2 from commit f8af434ea371c3758f71d47af496b44c41b04ba2.",
+      "content": "pubdoc 0.2.0 is released as v0.2.0 from commit 369f3f88019baf29f48534dff2569f400f2ce363.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubdoc",
-            "0.1.2",
+            "0.2.0",
             "",
             "",
-            "v0.1.2",
-            "f8af434ea371c3758f71d47af496b44c41b04ba2"
+            "v0.2.0",
+            "369f3f88019baf29f48534dff2569f400f2ce363"
           ]
         ]
       },
-      "scope": "the published release v0.1.2 of pubdoc",
+      "scope": "the published release v0.2.0 of pubdoc",
       "sources": [
         {
           "ref": "pubdoc",
-          "revision": "f8af434ea371c3758f71d47af496b44c41b04ba2"
+          "revision": "369f3f88019baf29f48534dff2569f400f2ce363"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubdoc 0.1.2 was released on 2026-11-13 from commit f8af434ea371c3758f71d47af496b44c41b04ba2 with these changes.",
+      "content": "pubdoc 0.2.0 was released on 2026-11-19 from commit 369f3f88019baf29f48534dff2569f400f2ce363 with these changes.",
       "data": {
         "columns": [
           {
@@ -57,28 +57,36 @@
         ],
         "rows": [
           [
-            "added",
-            "pubdoc build --all builds every document pubdoc list finds, each with all its variants' exports, goes on past a document that fails, prints built N of M documents naming those that failed, and exits non-zero if any did; pubdoc build NAME is as before"
+            "internal",
+            "pubkit is now pubrules: the repository runs on pubrules 0.43.0 (pubrules.json, ./pubrules, the managed workflows and test pins)"
+          ],
+          [
+            "changed",
+            "pubdoc builds document projects: a project.yml (parts, variants, layouts, review steps, publications; schema shipped in the package) and one directory of MyST parts per doc, with shared parts docs start from, <part>.<variant>.md overrides and an optional doc.yml that only narrows; build, preview and approve take <project>/<doc> and write <doc>/build/<variant>/<layout>.<ext> (build/ ignores itself) and <doc>/versions/; the old layout, a myst.yml and per-variant review-builder.yaml in each document, is gone, and init no longer touches .gitignore"
           ],
           [
             "added",
-            "pubdoc init writes requirements-pubdoc.txt, one line pinning this release's wheel (pubdoc @ https://github.com/Sustenaut/pubdoc/releases/download/vX.Y.Z/...whl), the release wheel pin pubkit's nightly moves; ./pubdoc names no release and runs the one that file pins, found beside the script from wherever it is called, and says so when the file or its pubdoc line is missing"
+            "pubdoc check validates every project.yml and doc.yml git knows of, in any repository: the schema, every name they refer to, each doc's required parts and that doc.yml only narrows; pubdoc list shows projects and their docs; pubdoc new-project starts one; checkers and places are named now and noted as not implemented yet"
+          ],
+          [
+            "fixed",
+            "pubdoc build nests a part's headings under its title again (# is a level-2 heading, as the cv-sidebar, lapreprint-typst and charged-ieee templates expect): each part file a doc's Typst layouts use is staged as a MyST project of its own whose table of contents is that file; and each layout's Typst goes to <variant>/<layout>/main.typ, so a layout named like a template's support file (lapreprint) no longer overwrites it and fails with a cyclic import"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.1.2 of pubdoc",
+      "scope": "the published release v0.2.0 of pubdoc",
       "sources": [
         {
           "ref": "pubdoc",
-          "revision": "f8af434ea371c3758f71d47af496b44c41b04ba2"
+          "revision": "369f3f88019baf29f48534dff2569f400f2ce363"
         }
       ]
     }
   },
-  "created": "2026-11-13T00:00:00Z",
+  "created": "2026-11-19T00:00:00Z",
   "sections": [
     {
       "heading": "Identity",

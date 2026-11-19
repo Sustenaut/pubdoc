@@ -1,4 +1,0 @@
-{
-  "category": "fixed",
-  "change": "pubdoc build nests a part's headings under its title again (# is a level-2 heading, as the cv-sidebar, lapreprint-typst and charged-ieee templates expect): each part file a doc's Typst layouts use is staged as a MyST project of its own whose table of contents is that file; and each layout's Typst goes to <variant>/<layout>/main.typ, so a layout named like a template's support file (lapreprint) no longer overwrites it and fails with a cyclic import"
-}
