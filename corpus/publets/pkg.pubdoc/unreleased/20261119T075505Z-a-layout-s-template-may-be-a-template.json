@@ -1,4 +1,0 @@
-{
-  "category": "added",
-  "change": "a layout's template may be a template directory of the repository: a value holding a / is a path relative to the project's directory (./templates/mine, ../templates/mine); pubdoc check refuses one outside the repository, missing, without template.yml or not kind: typst, and build points the export at it"
-}

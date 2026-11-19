@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubdoc 0.2.0 is released as v0.2.0 from commit 369f3f88019baf29f48534dff2569f400f2ce363.",
+      "content": "pubdoc 0.2.1 is released as v0.2.1 from commit a8c9f27fa0930e67928fd1c734810500c6d5b17e.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubdoc",
-            "0.2.0",
+            "0.2.1",
             "",
             "",
-            "v0.2.0",
-            "369f3f88019baf29f48534dff2569f400f2ce363"
+            "v0.2.1",
+            "a8c9f27fa0930e67928fd1c734810500c6d5b17e"
           ]
         ]
       },
-      "scope": "the published release v0.2.0 of pubdoc",
+      "scope": "the published release v0.2.1 of pubdoc",
       "sources": [
         {
           "ref": "pubdoc",
-          "revision": "369f3f88019baf29f48534dff2569f400f2ce363"
+          "revision": "a8c9f27fa0930e67928fd1c734810500c6d5b17e"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubdoc 0.2.0 was released on 2026-11-19 from commit 369f3f88019baf29f48534dff2569f400f2ce363 with these changes.",
+      "content": "pubdoc 0.2.1 was released on 2026-11-19 from commit a8c9f27fa0930e67928fd1c734810500c6d5b17e with these changes.",
       "data": {
         "columns": [
           {
@@ -57,31 +57,19 @@
         ],
         "rows": [
           [
-            "internal",
-            "pubkit is now pubrules: the repository runs on pubrules 0.43.0 (pubrules.json, ./pubrules, the managed workflows and test pins)"
-          ],
-          [
-            "changed",
-            "pubdoc builds document projects: a project.yml (parts, variants, layouts, review steps, publications; schema shipped in the package) and one directory of MyST parts per doc, with shared parts docs start from, <part>.<variant>.md overrides and an optional doc.yml that only narrows; build, preview and approve take <project>/<doc> and write <doc>/build/<variant>/<layout>.<ext> (build/ ignores itself) and <doc>/versions/; the old layout, a myst.yml and per-variant review-builder.yaml in each document, is gone, and init no longer touches .gitignore"
-          ],
-          [
             "added",
-            "pubdoc check validates every project.yml and doc.yml git knows of, in any repository: the schema, every name they refer to, each doc's required parts and that doc.yml only narrows; pubdoc list shows projects and their docs; pubdoc new-project starts one; checkers and places are named now and noted as not implemented yet"
-          ],
-          [
-            "fixed",
-            "pubdoc build nests a part's headings under its title again (# is a level-2 heading, as the cv-sidebar, lapreprint-typst and charged-ieee templates expect): each part file a doc's Typst layouts use is staged as a MyST project of its own whose table of contents is that file; and each layout's Typst goes to <variant>/<layout>/main.typ, so a layout named like a template's support file (lapreprint) no longer overwrites it and fails with a cyclic import"
+            "a layout's template may be a template directory of the repository: a value holding a / is a path relative to the project's directory (./templates/mine, ../templates/mine); pubdoc check refuses one outside the repository, missing, without template.yml or not kind: typst, and build points the export at it"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.2.0 of pubdoc",
+      "scope": "the published release v0.2.1 of pubdoc",
       "sources": [
         {
           "ref": "pubdoc",
-          "revision": "369f3f88019baf29f48534dff2569f400f2ce363"
+          "revision": "a8c9f27fa0930e67928fd1c734810500c6d5b17e"
         }
       ]
     }
