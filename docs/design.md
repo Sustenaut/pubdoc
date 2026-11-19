@@ -93,7 +93,10 @@ problems. Then, in `<doc>/build/`:
    as they sit in the project (`src/<doc>/...`, `src/shared/<name>/...`),
    and writes `src/myst.yml` from `project.yml`: one Typst export per
    variant x template layout, `article:` the part's resolved file,
-   `output: ../<variant>/<layout>.typ`;
+   `output: ../<variant>/<layout>/main.typ`, a directory per layout,
+   since the template's support files land beside its Typst: a layout
+   named `lapreprint` writing `lapreprint.typ` beside the template's own
+   `lapreprint.typ` replaced it and imported itself ("cyclic import");
 4. runs the pinned Curvenote (`npx --yes curvenote@<pinned> build
    --typst`) in `src/`, then `typst compile` on each export into
    `<variant>/<layout>.pdf`;
@@ -399,7 +402,7 @@ tracked; redirect it somewhere outside the repo or delete it afterwards.
 
 ## Regenerating a doc's Typst output
 
-If a render's `build/<variant>/<layout>.typ`/`.pdf` look wrong, the fix
+If a render's `build/<variant>/<layout>/main.typ` or `<layout>.pdf` look wrong, the fix
 belongs in the part's Markdown (or its frontmatter — title, authors,
 abstract part, keywords, etc.), never in the generated `.typ`. Two format-conversion
 quirks worth knowing about, hit and fixed while building the first doc

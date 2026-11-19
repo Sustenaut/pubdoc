@@ -187,7 +187,7 @@ repository; outside a git work tree it searches the disk. `build` checks
 the project first and refuses one with problems.
 
 `build` writes `<doc>/build/<variant>/<layout>.<ext>`: `.pdf` for a
-template layout (with its `.typ` source beside it), `.txt` for the
+template layout (its Typst source in `<variant>/<layout>/main.typ`), `.txt` for the
 LinkedIn exporter. `build --all` goes on past a doc that fails, prints
 `built N of M docs` (naming the ones that failed) and exits non-zero if
 any did.
@@ -237,7 +237,7 @@ pubrules does. To try a change on a real document repository, build the wheel
 
 A template or plugin change reaches a repository only when that
 repository moves to a release that has it. Rebuild every doc there
-(`./pubdoc build --all`) and compare the generated `build/*/*.typ` before
+(`./pubdoc build --all`) and compare the generated `build/*/*/main.typ` before
 committing the move.
 
 ### Releasing

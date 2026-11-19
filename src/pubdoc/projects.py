@@ -134,6 +134,14 @@ class Render:
     def output(self) -> Path:
         return self.doc.path / BUILD / self.variant / f"{self.layout}.{self.extension}"
 
+    @property
+    def typst_source(self) -> Path:
+        """Where Curvenote writes a template layout's Typst, in a directory of
+        its own: a template's support files land beside it, and a layout named
+        like one of them (lapreprint, beside lapreprint.typ) would otherwise
+        overwrite it, or import itself."""
+        return self.doc.path / BUILD / self.variant / self.layout / "main.typ"
+
 
 @dataclass
 class Project:
