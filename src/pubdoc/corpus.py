@@ -40,8 +40,8 @@ from pathlib import Path
 
 from . import projects, settings, versions
 
-PUBSEC_WHEEL = "https://github.com/Sustenaut/pubsec/releases/download/v0.3.0/pubsec-0.3.0-py3-none-any.whl"
-PUBSEC_SHA256 = "a9036c741e29098cdd04baf64c7873e0ff1dd6e7bde12e9671a3940370724e18"
+PUBSEC_WHEEL = "https://github.com/Sustenaut/pubsec/releases/download/v0.3.1/pubsec-0.3.1-py3-none-any.whl"
+PUBSEC_SHA256 = "e1f5fd270a6af71821a8b41287987ae18ba3af19bb9858c2003a9301805ae967"
 STORE = ".publet"
 KEY_FILE = "signing.key"
 RULES = "pubrules.json"
@@ -181,7 +181,13 @@ def init(project: projects.Project | None, root: Path, backup_name: str | None,
             args = ["sign", "--restore-key", "--principal=human"]
             if trusted:
                 args.append(f"--expect={trusted}")
-            versions.run_pub(corpus, *args)
+            try:
+                versions.run_pub(corpus, *args)
+            except versions.VersionError as e:
+                if "--restore-key" in str(e) and "unknown argument" in str(e):
+                    raise CorpusError("rebuilding the store around a restored key needs pub 0.4.1 or later "
+                                      "(pub sign --restore-key)") from None
+                raise
         key = author(corpus)
         if key != before:
             done.append(f"rebuilt the store around {projects.shown(key_file)}: {key}")
