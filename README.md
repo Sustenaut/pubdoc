@@ -230,9 +230,9 @@ The suite runs pubdoc against stand-ins for npx and typst, so it needs
 neither. pubdoc's own dependencies (PyYAML and jsonschema) are
 ranges in `pyproject.toml`, as a package's are, and pinned with hashes for
 the suite in `tests/requirements.lock`. SonarQube Cloud reads no lock in that
-format, so its "no lock file beside pyproject.toml" rule (`text:S8565`)
-is off for that one file: in `.sonarcloud.properties` for its Automatic
-Analysis, and in `pubrules.json` for the CI scan, as pubrules does. To try a change on a real document repository, build the wheel
+format, so `pubrules.json` turns off its "no lock file beside
+pyproject.toml" rule (`text:S8565`) for that one file in the CI scan, as
+pubrules does. To try a change on a real document repository, build the wheel
 (`make wheel`) and run it there with `uvx --from dist/pubdoc-*.whl pubdoc build <name>`.
 
 A template or plugin change reaches a repository only when that
