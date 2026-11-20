@@ -41,8 +41,8 @@ def wheel_pin(repo, path):
     assert len(lines) == 1, lines
     m = WHEEL_PIN.fullmatch(lines[0])
     assert m, lines[0]
-    assert (m["lead"], m["owner"], m["repo"]) == ("pubdoc @ ", "Sustenaut", "pubdoc"), m.groupdict()
-    assert m["file"].startswith("pubdoc-")
+    assert (m["lead"], m["owner"], m["repo"]) == ("pubdocrules @ ", "Sustenaut", "pubdoc"), m.groupdict()
+    assert m["file"].startswith("pubdocrules-")
 
 
 @given("pubdoc init has run")
