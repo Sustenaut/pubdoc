@@ -1,4 +1,0 @@
-{
-  "category": "changed",
-  "change": "pubdoc's Python distribution is pubdocrules, its PyPI name (PyPI's pubdoc is another project): the wheel is pubdocrules-X-py3-none-any.whl, attached to the release and uploaded to PyPI; `pubdoc init` pins `pubdocrules @ <wheel>`, and the launcher it writes runs a pin by either name; `import pubdoc` and the pubdoc command keep their names"
-}
