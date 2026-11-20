@@ -229,7 +229,11 @@ objects and an index:
   sign it into `corpus/objects/`; and records the version in
   `<doc>/versions/versions.yml`. Commit both. `--date` and
   `--rebuilt-from COMMIT` record a version rebuilt from an earlier commit's
-  sources, to replace a PDF approved before versions existed.
+  sources, to replace a PDF approved before versions existed. The version
+  publet's `created` is when it was approved, the signer's claim of when it
+  signed; the doc's date is the approval date in its claims and
+  `versions.yml`. `$PUB_CREATED` pins `created`, as it pins the dates pub
+  gives its signatures.
 - The publet's claims: `#identity` (doc, variant, version, approval date
   and approver, pubdoc release, commit), `#sources` (every file it was
   built from, by path and SHA-256) and `#renders` (layout, format, SHA-256,

@@ -52,6 +52,14 @@ Feature: Approving a doc makes a signed version, its renders in storage
     And "job-applications/globex/versions/versions.yml" contains "approved: '2026-09-22'"
     And "job-applications/globex/versions/versions.yml" contains "rebuilt_from: 3f9e1c2"
     And "corpus/publets/doc.job-applications.globex.engineering/publet.json" contains "rebuilt from the sources of commit 3f9e1c2"
+    And "corpus/publets/doc.job-applications.globex.engineering/publet.json" contains "approved by schryer on 2026-09-22"
+    And the version publet of "job-applications/globex" is dated within a minute of now
+
+  Scenario: $PUB_CREATED pins when a version says it was approved
+    Given pub's dates are pinned to "2030-01-02T03:04:05Z"
+    When I run pubdoc "approve" "job-applications/globex" "--date" "2026-09-22"
+    Then it succeeds
+    And the version publet of "job-applications/globex" is dated "2030-01-02T03:04:05Z"
 
   Scenario: Only the named variant
     When I run pubdoc "approve" "job-applications/acme" "--variant" "research"

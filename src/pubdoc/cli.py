@@ -487,7 +487,8 @@ def cmd_approve(args: argparse.Namespace) -> int:
                 print(f"note: checker {checker!r} is not implemented yet; approving without it")
     date = args.date or datetime.date.today().isoformat()
     approval = versions.Approval(approver=approver(doc), date=date, commit=git(root, "rev-parse", "HEAD"),
-                                 rebuilt_from=args.rebuilt_from or "", pubdoc=version())
+                                 rebuilt_from=args.rebuilt_from or "", pubdoc=version(),
+                                 signed=versions.now())
     typst = resolve_typst()
     shown = None
     for v in variants:

@@ -154,6 +154,18 @@ def latest(index: dict, variant: str) -> dict | None:
 
 # Approving ---------------------------------------------------------------
 
+CREATED_VAR = "PUB_CREATED"
+
+
+def now() -> str:
+    """When a version is approved: $PUB_CREATED, which pins pub's dates too,
+    else the current instant, RFC 3339 UTC to the second."""
+    pinned = os.environ.get(CREATED_VAR)
+    if pinned:
+        return pinned
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 @dataclass(frozen=True)
 class Approval:
     approver: str
@@ -161,6 +173,7 @@ class Approval:
     commit: str
     rebuilt_from: str  # "" unless rebuilt from an earlier commit's sources
     pubdoc: str
+    signed: str = ""   # when it was approved, RFC 3339 UTC: the publet's created
 
     @property
     def timestamp(self) -> int:
@@ -194,7 +207,10 @@ def publet_source(doc: Doc, variant: str, number: int, approval: Approval, the_t
                if approval.rebuilt_from else "")
     return {
         "slug": slug(doc, variant), "tag": the_tag, "title": who,
-        "created": f"{approval.date}T00:00:00Z",
+        # When the version was approved, not the doc's date: `created` is
+        # the signer's claim of when it signed. The doc's date is in the
+        # identity claim's sentence and data row.
+        "created": approval.signed or now(),
         "claims": {
             "identity": {
                 "class": "archival", "scope": scope,
