@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubdoc 0.4.1 is released as v0.4.1 from commit 9eac3fe703b45211dd3f049e18425935ed0f3af0.",
+      "content": "pubdoc 0.5.0 is released as v0.5.0 from commit 7d292b6188f360679a34da5efaabed15d71345f4.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubdoc",
-            "0.4.1",
+            "0.5.0",
             "",
             "",
-            "v0.4.1",
-            "9eac3fe703b45211dd3f049e18425935ed0f3af0"
+            "v0.5.0",
+            "7d292b6188f360679a34da5efaabed15d71345f4"
           ]
         ]
       },
-      "scope": "the published release v0.4.1 of pubdoc",
+      "scope": "the published release v0.5.0 of pubdoc",
       "sources": [
         {
           "ref": "pubdoc",
-          "revision": "9eac3fe703b45211dd3f049e18425935ed0f3af0"
+          "revision": "7d292b6188f360679a34da5efaabed15d71345f4"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubdoc 0.4.1 was released on 2026-11-20 from commit 9eac3fe703b45211dd3f049e18425935ed0f3af0 with these changes.",
+      "content": "pubdoc 0.5.0 was released on 2026-11-20 from commit 7d292b6188f360679a34da5efaabed15d71345f4 with these changes.",
       "data": {
         "columns": [
           {
@@ -57,19 +57,19 @@
         ],
         "rows": [
           [
-            "fixed",
-            "Uploads to and downloads from storage name pubdoc as their User-Agent: storage's edge refused urllib's own (403, error code 1010), so pubdoc approve and fetch failed against storage.sustenaut.eu"
+            "changed",
+            "pubdoc's Python distribution is pubdocrules, its PyPI name (PyPI's pubdoc is another project): the wheel is pubdocrules-X-py3-none-any.whl, attached to the release and uploaded to PyPI; `pubdoc init` pins `pubdocrules @ <wheel>`, and the launcher it writes runs a pin by either name; `import pubdoc` and the pubdoc command keep their names"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.4.1 of pubdoc",
+      "scope": "the published release v0.5.0 of pubdoc",
       "sources": [
         {
           "ref": "pubdoc",
-          "revision": "9eac3fe703b45211dd3f049e18425935ed0f3af0"
+          "revision": "7d292b6188f360679a34da5efaabed15d71345f4"
         }
       ]
     }
