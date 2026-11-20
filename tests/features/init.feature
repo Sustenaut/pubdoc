@@ -41,9 +41,9 @@ Feature: pubdoc init sets a repository up to run this release
 
   Scenario Outline: The launcher runs the release the pin names, from wherever it is called
     Given pubdoc init has run
-    And the pin reads "pubdoc @ https://github.com/Sustenaut/pubdoc/releases/download/v9.8.7/pubdoc-9.8.7-py3-none-any.whl"
+    And the pin reads "pubdocrules @ https://github.com/Sustenaut/pubdoc/releases/download/v9.8.7/pubdocrules-9.8.7-py3-none-any.whl"
     When I run the launcher as "<launcher>" in "<where>" with "build .."
-    Then uvx was run with "--from https://github.com/Sustenaut/pubdoc/releases/download/v9.8.7/pubdoc-9.8.7-py3-none-any.whl pubdoc build .."
+    Then uvx was run with "--from https://github.com/Sustenaut/pubdoc/releases/download/v9.8.7/pubdocrules-9.8.7-py3-none-any.whl pubdoc build .."
 
     Examples:
       | launcher     | where |
@@ -56,6 +56,12 @@ Feature: pubdoc init sets a repository up to run this release
     When I run the launcher as "./pubdoc" in "." with "list"
     Then the exit code is 1
     And stderr mentions "requirements-pubdoc.txt, which pins the pubdoc ./pubdoc runs"
+
+  Scenario: The launcher runs a pin from before the distribution was pubdocrules
+    Given pubdoc init has run
+    And the pin reads "pubdoc @ https://github.com/Sustenaut/pubdoc/releases/download/v0.4.1/pubdoc-0.4.1-py3-none-any.whl"
+    When I run the launcher as "./pubdoc" in "." with "list"
+    Then uvx was run with "--from https://github.com/Sustenaut/pubdoc/releases/download/v0.4.1/pubdoc-0.4.1-py3-none-any.whl pubdoc list"
 
   Scenario: The launcher with no pubdoc line in its pin says what to do
     Given pubdoc init has run

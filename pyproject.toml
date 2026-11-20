@@ -3,7 +3,9 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pubdoc"
+# The distribution is pubdocrules (PyPI's "pubdoc" is another project); the
+# package imported and the command are pubdoc.
+name = "pubdocrules"
 version = "0.4.1"
 description = "Build, preview and approve MyST documents as Typst PDFs, with a shared template library and publet links."
 readme = "README.md"

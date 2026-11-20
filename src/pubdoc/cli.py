@@ -30,7 +30,10 @@ from .projects import BUILD, VERSIONS, Doc, Problem, Project, Render
 
 CURVENOTE_VERSION = "0.17.2"
 LAUNCHER = "pubdoc"
-WHEEL_URL = "https://github.com/Sustenaut/pubdoc/releases/download/v{version}/pubdoc-{version}-py3-none-any.whl"
+# The distribution: PyPI's "pubdoc" is another project, so pubdoc's is
+# pubdocrules. The package, the command and the repository stay pubdoc.
+DISTRIBUTION = "pubdocrules"
+WHEEL_URL = "https://github.com/Sustenaut/pubdoc/releases/download/v{version}/pubdocrules-{version}-py3-none-any.whl"
 # The launcher's pin, one requirement line beside it, where pubrules's nightly
 # moves it to pubdoc's latest release like any other release wheel pin.
 PIN = "requirements-pubdoc.txt"
@@ -41,7 +44,7 @@ IGNORE_ALL = "# Written by pubdoc: everything here is built, never committed.\n*
 
 def version() -> str:
     try:
-        return metadata.version("pubdoc")
+        return metadata.version(DISTRIBUTION)
     except metadata.PackageNotFoundError:  # a checkout run without installing
         return "0+unknown"
 
@@ -691,9 +694,11 @@ if [ ! -f "$pin" ]; then
   echo "pubdoc: no $pin, which pins the pubdoc ./pubdoc runs; run pubdoc init again" >&2
   exit 1
 fi
-url="$(sed -n 's/^pubdoc @ //p' "$pin" | head -n 1)"
+# The requirement is named by the distribution: pubdocrules, or pubdoc for a
+# release from before the name changed.
+url="$(sed -n 's/^[A-Za-z0-9_.-]* @ //p' "$pin" | head -n 1)"
 if [ -z "$url" ]; then
-  echo "pubdoc: $pin has no line \"pubdoc @ URL\"; run pubdoc init again" >&2
+  echo "pubdoc: $pin has no line \"pubdocrules @ URL\"; run pubdoc init again" >&2
   exit 1
 fi
 
@@ -713,7 +718,7 @@ def cmd_init(_: argparse.Namespace) -> int:
         die(f"./{LAUNCHER} is a directory, such as an old pubdoc submodule; remove it first")
     path.write_text(launcher(), encoding="utf-8")
     path.chmod(0o755)
-    Path(PIN).write_text(f"pubdoc @ {WHEEL_URL.format(version=release)}\n", encoding="utf-8")
+    Path(PIN).write_text(f"{DISTRIBUTION} @ {WHEEL_URL.format(version=release)}\n", encoding="utf-8")
     print(f"wrote ./{LAUNCHER}, which runs the pubdoc ./{PIN} pins: {release}")
     return 0
 

@@ -51,7 +51,7 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 def _agent() -> str:
     try:
-        return f"pubdoc/{metadata.version('pubdoc')}"
+        return f"pubdoc/{metadata.version('pubdocrules')}"
     except metadata.PackageNotFoundError:  # a checkout run without installing
         return "pubdoc"
 

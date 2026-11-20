@@ -34,14 +34,14 @@ MyST and Typst behaviour it works around.
 From the repository's root, run a release once:
 
 ```bash
-uvx --from https://github.com/Sustenaut/pubdoc/releases/download/v0.1.0/pubdoc-0.1.0-py3-none-any.whl pubdoc init
+uvx --from pubdocrules pubdoc init
 ```
 
 That writes `requirements-pubdoc.txt`, one line pinning that release's
 wheel:
 
 ```
-pubdoc @ https://github.com/Sustenaut/pubdoc/releases/download/v0.1.0/pubdoc-0.1.0-py3-none-any.whl
+pubdocrules @ https://github.com/Sustenaut/pubdoc/releases/download/vX.Y.Z/pubdocrules-X.Y.Z-py3-none-any.whl
 ```
 
 and `./pubdoc`, which names no release: it runs the one that file pins with
@@ -317,7 +317,7 @@ the suite in `tests/requirements.lock`. SonarQube Cloud reads no lock in that
 format, so `pubrules.json` turns off its "no lock file beside
 pyproject.toml" rule (`text:S8565`) for that one file in the CI scan, as
 pubrules does. To try a change on a real document repository, build the wheel
-(`make wheel`) and run it there with `uvx --from dist/pubdoc-*.whl pubdoc build <name>`.
+(`make wheel`) and run it there with `uvx --from dist/pubdocrules-*.whl pubdoc build <name>`.
 
 A template or plugin change reaches a repository only when that
 repository moves to a release that has it. Rebuild every doc there
@@ -333,7 +333,7 @@ release), and CI checks it. To release, run `pubrel prepare` on an
 up-to-date main in a checkout holding the release key (`corpus/.publet`,
 gitignored): it sets `version` in `pyproject.toml`, signs the release and
 opens its pull request. Merging that tags `vX.Y.Z` and makes the release,
-and `wheel.yml` then attaches `pubdoc-X.Y.Z-py3-none-any.whl`.
+and `wheel.yml` then attaches `pubdocrules-X.Y.Z-py3-none-any.whl` and uploads it to PyPI as pubdocrules.
 
 ## License
 
