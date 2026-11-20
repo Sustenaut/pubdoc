@@ -1,0 +1,4 @@
+{
+  "category": "fixed",
+  "change": "Uploads to and downloads from storage name pubdoc as their User-Agent: storage's edge refused urllib's own (403, error code 1010), so pubdoc approve and fetch failed against storage.sustenaut.eu"
+}

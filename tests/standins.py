@@ -154,6 +154,10 @@ class Storage:
 
             def authorized(self):
                 storage.requests += 1
+                # As storage's edge does: urllib's own agent is refused.
+                if self.headers.get("User-Agent", "").startswith("Python-urllib"):
+                    self.answer(403, b"error code: 1010")
+                    return False
                 if self.headers.get("Authorization") != f"Bearer {Storage.TOKEN}":
                     self.answer(401, {"error": "a token is needed"})
                     return False

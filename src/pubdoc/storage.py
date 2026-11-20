@@ -18,6 +18,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from importlib import metadata
 from pathlib import Path
 
 
@@ -48,7 +49,17 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         raise urllib.error.HTTPError(req.full_url, code, f"redirected to {newurl}, not followed", headers, fp)
 
 
+def _agent() -> str:
+    try:
+        return f"pubdoc/{metadata.version('pubdoc')}"
+    except metadata.PackageNotFoundError:  # a checkout run without installing
+        return "pubdoc"
+
+
 _OPENER = urllib.request.build_opener(_NoRedirect)
+# Every request names pubdoc: storage's edge (Cloudflare) refuses urllib's
+# own Python-urllib/<version> with a 403 (error code 1010).
+_OPENER.addheaders = [("User-Agent", _agent())]
 
 
 def _request(request: urllib.request.Request, auth: str | None) -> bytes:
