@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubdoc 0.4.0 is released as v0.4.0 from commit e484043ad0fa9f2accf910676541a5a9a32a7735.",
+      "content": "pubdoc 0.4.1 is released as v0.4.1 from commit 9eac3fe703b45211dd3f049e18425935ed0f3af0.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubdoc",
-            "0.4.0",
+            "0.4.1",
             "",
             "",
-            "v0.4.0",
-            "e484043ad0fa9f2accf910676541a5a9a32a7735"
+            "v0.4.1",
+            "9eac3fe703b45211dd3f049e18425935ed0f3af0"
           ]
         ]
       },
-      "scope": "the published release v0.4.0 of pubdoc",
+      "scope": "the published release v0.4.1 of pubdoc",
       "sources": [
         {
           "ref": "pubdoc",
-          "revision": "e484043ad0fa9f2accf910676541a5a9a32a7735"
+          "revision": "9eac3fe703b45211dd3f049e18425935ed0f3af0"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubdoc 0.4.0 was released on 2026-11-19 from commit e484043ad0fa9f2accf910676541a5a9a32a7735 with these changes.",
+      "content": "pubdoc 0.4.1 was released on 2026-11-20 from commit 9eac3fe703b45211dd3f049e18425935ed0f3af0 with these changes.",
       "data": {
         "columns": [
           {
@@ -57,32 +57,24 @@
         ],
         "rows": [
           [
-            "added",
-            "pubdoc corpus init [PROJECT] [--bitwarden-project ID] [--backup-name NAME] [--no-backup]: makes the corpus versions are signed in and its key with pub, names the key as corpus.key, declares it in pubrules.json's signing_keys, keeps the store out of git and backs the key up with pubsec's pinned wheel; idempotent; where the config trusts a key this machine lacks it points to pubsec signing-key restore, and around a key restored that way it rebuilds the store with pub sign --restore-key and checks it is the trusted key"
-          ],
-          [
-            "added",
-            "pubdoc build --date YYYY-MM-DD, which approve now passes too: the doc's date, which templates print, unless a part sets its own, and the PDFs' creation time; with it and the pinned fonts, the PDFs approved before versions existed rebuild identically"
-          ],
-          [
-            "changed",
-            "pubdoc renders with the fonts it carries alone (typst --ignore-system-fonts and pubdoc's fonts/: DejaVu Sans, Ubuntu Regular and Liberation Sans, beside typst's own), so a render no longer changes with the fonts a machine has installed"
+            "fixed",
+            "Uploads to and downloads from storage name pubdoc as their User-Agent: storage's edge refused urllib's own (403, error code 1010), so pubdoc approve and fetch failed against storage.sustenaut.eu"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.4.0 of pubdoc",
+      "scope": "the published release v0.4.1 of pubdoc",
       "sources": [
         {
           "ref": "pubdoc",
-          "revision": "e484043ad0fa9f2accf910676541a5a9a32a7735"
+          "revision": "9eac3fe703b45211dd3f049e18425935ed0f3af0"
         }
       ]
     }
   },
-  "created": "2026-11-19T00:00:00Z",
+  "created": "2026-11-20T00:00:00Z",
   "sections": [
     {
       "heading": "Identity",
