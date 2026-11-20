@@ -284,8 +284,12 @@ token. Run again, it changes nothing. On another machine, where the config
 already trusts a key this one lacks, it refuses to make another and points
 to `pubsec signing-key restore NAME`; once that has put the key file back,
 `pubdoc corpus init` rebuilds the store around it (`pub sign --restore-key`,
-pub 0.4.1 and later) and checks it is the key `corpus.key` names. Commit the
-corpus's `corpus.json` and the config naming its key.
+pub 0.4.1 and later) and checks it is the key `corpus.key` names. Once the
+corpus has published, its key object is committed in `objects/` and is the
+key. Before that, the key object is rebuilt from the secret and the instant
+the key was made at: `--key-created INSTANT`, or pub 0.4's
+`2026-09-16T00:00:00Z` when not given. Commit the corpus's `corpus.json`
+and the config naming its key.
 
 ## Links with `{pub}`
 

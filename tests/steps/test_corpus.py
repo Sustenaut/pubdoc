@@ -63,6 +63,15 @@ def store_gone(repo):
     shutil.rmtree(repo / "corpus" / ".publet")
 
 
+@given("the corpus has committed its key object")
+def key_committed(repo):
+    # pub commits it in objects/ at the corpus's first publish; only that it
+    # is there matters to pubdoc.
+    objects = repo / "corpus" / "objects"
+    objects.mkdir(exist_ok=True)
+    (objects / (trusted(repo).replace(":", "_") + ".cbor")).write_bytes(b"the key object")
+
+
 @given("the corpus's store is gone from this machine, its key put back")
 def key_put_back(repo):
     secret = (repo / "corpus" / ".publet" / "signing.key").read_bytes()

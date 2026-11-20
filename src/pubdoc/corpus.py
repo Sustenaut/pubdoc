@@ -18,7 +18,10 @@ when it is not done yet, so running it again changes nothing:
    the key the config trusts would sign nothing.
 3. With a key on this machine and no store around it (one just restored):
    `pub sign --restore-key` rebuilds the store's key object from it, and it
-   must come out as the key corpus.key names.
+   must come out as the key corpus.key names. Once the corpus has published,
+   its key object is committed in objects/ and is the key; before that the
+   object is rebuilt from the secret and the instant the key was made at,
+   --key-created (pub 0.4's 2026-09-16T00:00:00Z when not given).
 4. pubrules.json's signing_keys declares the key file, under NAME in the
    Bitwarden project ID, where it does not yet (both are needed only then),
    and .gitignore keeps the store out of git.
@@ -45,6 +48,8 @@ PUBSEC_SHA256 = "e1f5fd270a6af71821a8b41287987ae18ba3af19bb9858c2003a9301805ae96
 STORE = ".publet"
 KEY_FILE = "signing.key"
 RULES = "pubrules.json"
+# When pub 0.4 and earlier dated every key made without --created.
+LEGACY_CREATED = "2026-09-16T00:00:00Z"
 
 
 class CorpusError(Exception):
@@ -150,6 +155,21 @@ def ignore(root: Path, store: str) -> bool:
     return True
 
 
+def restore_args(corpus: Path, trusted: str | None, key_created: str | None) -> list[str]:
+    """`pub sign --restore-key`'s arguments. A corpus commits its key object
+    in objects/ at its first publish: with it, `--expect` is all pub needs.
+    Before that the key object is rebuilt from the secret and the settings
+    it was made with, its creation instant included, which pub 0.5 no longer
+    assumes: `key_created`, else pub 0.4's fixed one."""
+    committed = trusted and (corpus / "objects" / f"{trusted.replace(':', '_')}.cbor").is_file()
+    if committed:
+        return ["sign", "--restore-key", f"--expect={trusted}"]
+    args = ["sign", "--restore-key", "--principal=human", f"--created={key_created or LEGACY_CREATED}"]
+    if trusted:
+        args.append(f"--expect={trusted}")
+    return args
+
+
 def pubsec(root: Path, *args: str) -> int:
     """Run pubsec's pinned wheel, checked by its sha256; $PUBDOC_PUBSEC names
     another pubsec to run instead."""
@@ -168,7 +188,7 @@ def pubsec(root: Path, *args: str) -> int:
 
 
 def init(project: projects.Project | None, root: Path, backup_name: str | None,
-         bitwarden_project: str | None, backup: bool) -> list[str]:
+         bitwarden_project: str | None, backup: bool, key_created: str | None = None) -> list[str]:
     """Make or complete the corpus; what was done, line by line."""
     conf = settings.of(project) if project else root_settings(root)
     # The corpus is made, and pub run in it, only inside the repository.
@@ -203,9 +223,7 @@ def init(project: projects.Project | None, root: Path, backup_name: str | None,
             # the key the config trusts.
             if not (corpus / STORE / "config").is_file():
                 versions.run_pub(corpus, "init")
-            args = ["sign", "--restore-key", "--principal=human"]
-            if trusted:
-                args.append(f"--expect={trusted}")
+            args = restore_args(corpus, trusted, key_created)
             try:
                 versions.run_pub(corpus, *args)
             except versions.VersionError as e:
