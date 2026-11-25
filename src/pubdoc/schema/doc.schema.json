@@ -2,13 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Sustenaut/pubdoc/blob/main/src/pubdoc/schema/doc.schema.json",
   "title": "pubdoc doc.yml",
-  "description": "An optional doc.yml beside a doc's parts. It can only narrow its project.yml: fewer variants, layouts or publications, narrower readers, and review steps that keep every project step and may only add checkers, reviewers or steps.",
+  "description": "An optional doc.yml beside a doc's parts. It can only narrow its project.yml, and give a template layout another template: fewer variants, layouts or publications, narrower readers, and review steps that keep every project step and may only add checkers, reviewers or steps.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
     "variants": {"$ref": "project.schema.json#/$defs/names", "description": "The project variants this doc has."},
     "layouts": {"$ref": "project.schema.json#/$defs/names", "description": "The project layouts this doc is rendered in."},
     "review": {"$ref": "project.schema.json#/$defs/review"},
-    "publish": {"type": "array", "items": {"$ref": "project.schema.json#/$defs/publication"}}
+    "publish": {"type": "array", "items": {"$ref": "project.schema.json#/$defs/publication"}},
+    "templates": {"type": "object", "additionalProperties": {"type": "string", "minLength": 1}, "description": "Another template for a layout of the project's that a template renders, by layout name: a template pubdoc carries, or a path (holding a /) relative to the doc's directory to a template directory in the repository."}
   }
 }

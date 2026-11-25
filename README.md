@@ -160,7 +160,19 @@ review:                           # every project step, in order; may add
 It may publish to fewer places, layouts, variants and readers (`named`
 is narrower than `signed-in`, which is narrower than `public`), and it may
 add checkers, reviewers and steps, but never drop or loosen a project
-review step. [examples/job-applications/](examples/job-applications/) is
+review step.
+
+A `doc.yml` may also give a layout the doc keeps, one a template renders,
+another template for that doc alone, under the same rules as `project.yml`:
+a template pubdoc carries by name, or a template directory of the
+repository by a path holding a `/`, relative to the doc's directory. A doc
+approved long ago can keep the template it was built with while the
+project moves on:
+
+```yaml
+# job-applications/veriff/doc.yml
+templates: {letter-pdf: ../templates/cv-sidebar-2026-09, cv-pdf: ../templates/cv-sidebar-2026-09}
+``` [examples/job-applications/](examples/job-applications/) is
 a complete project with two docs.
 
 ## Usage
