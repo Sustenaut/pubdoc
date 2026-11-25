@@ -172,8 +172,10 @@ project moves on:
 ```yaml
 # job-applications/veriff/doc.yml
 templates: {letter-pdf: ../templates/cv-sidebar-2026-09, cv-pdf: ../templates/cv-sidebar-2026-09}
-``` [examples/job-applications/](examples/job-applications/) is
-a complete project with two docs.
+```
+
+[examples/job-applications/](examples/job-applications/) is a complete
+project with two docs.
 
 ## Usage
 
