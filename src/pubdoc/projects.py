@@ -445,8 +445,11 @@ def doc_problems(doc: Doc, notes: set[str]) -> list[Problem]:
             found.extend(publication_problems(file, here, entry, doc.layouts(), doc.variants(), notes))
             found.extend(narrower_publication(file, here, entry, config.get("publish", []), config["variants"]))
 
+    # A part is required of a doc only when one of its layouts renders it: a
+    # doc whose doc.yml narrows its layouts to a CV's needs no letter.
+    rendered = {config["layouts"][name].get("part") for name in doc.layouts()}
     for part, spec in config["parts"].items():
-        if not spec["required"]:
+        if not spec["required"] or part not in rendered:
             continue
         for variant in doc.variants():
             if not doc.source(part, variant):

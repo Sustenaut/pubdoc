@@ -112,7 +112,8 @@ publish:
 ```
 
 - `parts`: what each doc supplies. A `required` part must resolve for
-  every variant of every doc. `starts-from: shared/<name>` names a shared
+  every variant of every doc whose layouts render it: a doc whose `doc.yml`
+  keeps only `[cv-pdf, cv-linkedin]` needs no letter. `starts-from: shared/<name>` names a shared
   part, `shared/<name>/<part>.md`.
 - `variants`: audiences. A file `<part>.<variant>.md` replaces
   `<part>.md` for that variant, in a doc or in a shared part.
