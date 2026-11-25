@@ -1,0 +1,4 @@
+{
+  "category": "fixed",
+  "change": "A required part is required of a doc only when one of its layouts renders it: a doc whose doc.yml keeps only [cv-pdf, cv-linkedin] needs no letter, where check refused it"
+}

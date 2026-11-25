@@ -57,6 +57,14 @@ Feature: pubdoc builds every variant and layout of a doc
     And "job-applications/globex/build/research" does not exist
     And "job-applications/globex/build/engineering/cv-linkedin.txt" does not exist
 
+  Scenario: A doc that renders only the CV builds without a letter
+    Given the file "job-applications/cv/doc.yml" reads "layouts: [cv-pdf, cv-linkedin]"
+    When I run pubdoc "build" "job-applications/cv"
+    Then it succeeds
+    And typst compiled "job-applications/cv/build/engineering/cv-pdf/main.typ" to "job-applications/cv/build/engineering/cv-pdf.pdf"
+    And "job-applications/cv/build/engineering/cv-linkedin.txt" exists
+    And "job-applications/cv/build/engineering/letter-pdf.pdf" does not exist
+
   Scenario: A project builds each of its docs
     When I run pubdoc "build" "job-applications"
     Then it succeeds

@@ -99,6 +99,12 @@ Feature: pubdoc check validates every document project in a repository
     Then the exit code is 1
     And stderr mentions "job-applications/globex: no letter.md or letter.engineering.md for required part 'letter' in variant 'engineering'"
 
+  Scenario: A doc whose layouts render no letter needs no letter
+    Given the file "job-applications/cv/doc.yml" reads "layouts: [cv-pdf, cv-linkedin]"
+    When I run pubdoc "check"
+    Then it succeeds
+    And stderr does not mention "job-applications/cv"
+
   Scenario: A required part with no file and no shared part is missing
     Given the file "job-applications/shared/base-cv/cv.md" is gone
     And the file "job-applications/shared/base-cv/cv.research.md" is gone
