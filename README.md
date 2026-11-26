@@ -244,7 +244,11 @@ objects and an index:
   sign it into `corpus/objects/`; and records the version in
   `<doc>/versions/versions.yml`. Commit both. `--date` and
   `--rebuilt-from COMMIT` record a version rebuilt from an earlier commit's
-  sources, to replace a PDF approved before versions existed.
+  sources, to replace a PDF approved before versions existed. The version
+  publet's `created` is when it was approved, the signer's claim of when it
+  signed; the doc's date is the approval date in its claims and
+  `versions.yml`. `$PUB_CREATED` pins `created`, as it pins the dates pub
+  gives its signatures.
 - The publet's claims: `#identity` (doc, variant, version, approval date
   and approver, pubdoc release, commit), `#sources` (every file it was
   built from, by path and SHA-256) and `#renders` (layout, format, SHA-256,
@@ -274,8 +278,9 @@ corpus: {path: corpus}                          # from the project: <project>/co
 
 Storage takes `$PUBDOC_STORAGE_TOKEN`, else `$GITHUB_TOKEN`, else `gh auth
 token`: a token that may push to the tenant's repository. Signing and
-verifying need publet's `pub` 0.4 (`cargo install --locked --git
-https://github.com/Sustenaut/publet --tag v0.4.0 publet-cli`); comparing
+verifying need publet's `pub` 0.4 or 0.5 (`cargo install --locked --git
+https://github.com/Sustenaut/publet --tag v0.5.0 publet-cli`, or the static
+`pub` each release attaches); comparing
 needs poppler.
 
 A corpus is set up once, by its key's owner, with
@@ -295,8 +300,12 @@ token. Run again, it changes nothing. On another machine, where the config
 already trusts a key this one lacks, it refuses to make another and points
 to `pubsec signing-key restore NAME`; once that has put the key file back,
 `pubdoc corpus init` rebuilds the store around it (`pub sign --restore-key`,
-pub 0.4.1 and later) and checks it is the key `corpus.key` names. Commit the
-corpus's `corpus.json` and the config naming its key.
+pub 0.4.1 and later) and checks it is the key `corpus.key` names. Once the
+corpus has published, its key object is committed in `objects/` and is the
+key. Before that, the key object is rebuilt from the secret and the instant
+the key was made at: `--key-created INSTANT`, or pub 0.4's
+`2026-09-16T00:00:00Z` when not given. Commit the corpus's `corpus.json`
+and the config naming its key.
 
 ## Links with `{pub}`
 

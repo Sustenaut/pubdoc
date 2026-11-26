@@ -487,7 +487,8 @@ def cmd_approve(args: argparse.Namespace) -> int:
                 print(f"note: checker {checker!r} is not implemented yet; approving without it")
     date = args.date or datetime.date.today().isoformat()
     approval = versions.Approval(approver=approver(doc), date=date, commit=git(root, "rev-parse", "HEAD"),
-                                 rebuilt_from=args.rebuilt_from or "", pubdoc=version())
+                                 rebuilt_from=args.rebuilt_from or "", pubdoc=version(),
+                                 signed=versions.now())
     typst = resolve_typst()
     shown = None
     for v in variants:
@@ -602,7 +603,8 @@ def cmd_corpus(args: argparse.Namespace) -> int:
     else:
         root = projects.repo_root(Path.cwd()).resolve()
     try:
-        done = corpus.init(project, root, args.backup_name, args.bitwarden_project, not args.no_backup)
+        done = corpus.init(project, root, args.backup_name, args.bitwarden_project, not args.no_backup,
+                           key_created=args.key_created)
     except (corpus.CorpusError, versions.VersionError) as e:
         die(str(e))
     for line in done or ["nothing to do: the corpus, its key and its backup are in place"]:
@@ -779,7 +781,10 @@ def parser() -> argparse.ArgumentParser:
         ("--bitwarden-project", {"metavar": "ID", "help": "the Bitwarden project the key is backed up to, "
                                  "when pubrules.json does not declare the key yet"}),
         ("--backup-name", {"metavar": "NAME", "help": "the backup's name there, when not declared yet"}),
-        ("--no-backup", {"action": "store_true", "help": "do not run pubsec signing-key backup"}))
+        ("--no-backup", {"action": "store_true", "help": "do not run pubsec signing-key backup"}),
+        ("--key-created", {"metavar": "INSTANT", "help": "when a restored key was made (RFC 3339 UTC), "
+                           "needed only when its key object is not committed in the corpus's objects/; "
+                           f"default {corpus.LEGACY_CREATED}, pub 0.4's"}))
     add("compare", cmd_compare, "whether two PDFs are the same document: pages, text, pixels",
         ("first", {"help": "a PDF"}), ("second", {"help": "another PDF"}))
     add("linkedin", cmd_linkedin, "a CV's plain-text export for LinkedIn",

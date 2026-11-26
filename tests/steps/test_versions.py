@@ -7,6 +7,8 @@ storage itself.
 
 from __future__ import annotations
 
+import datetime
+import json
 import stat
 import subprocess
 import sys
@@ -177,3 +179,25 @@ def drop_newest(repo, doc):
     data = yaml.safe_load(path.read_text())
     data["versions"] = data["versions"][1:]
     path.write_text(yaml.safe_dump(data, sort_keys=False))
+
+
+@given(parsers.parse('pub\'s dates are pinned to "{instant}"'))
+def dates_pinned(monkeypatch, instant):
+    monkeypatch.setenv("PUB_CREATED", instant)
+
+
+def _publet_created(repo, doc: str) -> str:
+    slug = "doc." + doc.replace("/", ".") + ".engineering"
+    return json.loads((repo / "corpus" / "publets" / slug / "publet.json").read_text())["created"]
+
+
+@then(parsers.parse('the version publet of "{doc}" is dated within a minute of now'))
+def publet_dated_now(repo, doc):
+    created = _publet_created(repo, doc)
+    then_ = datetime.datetime.strptime(created, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.UTC)
+    assert abs((datetime.datetime.now(datetime.UTC) - then_).total_seconds()) < 60, created
+
+
+@then(parsers.parse('the version publet of "{doc}" is dated "{instant}"'))
+def publet_dated(repo, doc, instant):
+    assert _publet_created(repo, doc) == instant

@@ -30,6 +30,16 @@ with open(os.environ["PUBDOC_TEST_LOG"], "a") as log:
 def cid(data):
     return "pub:sha2-256:" + base64.b32encode(hashlib.sha256(data).digest()).decode().lower().rstrip("=")
 
+def key_object(secret):
+    """A key's object, as pub makes it: from the secret's public half (here
+    its hash), never the secret; the key is this object's identifier."""
+    return json.dumps({"type": "key", "pubkey": hashlib.sha256(secret).hexdigest()}).encode()
+
+
+def key_of(secret):
+    return cid(key_object(secret))
+
+
 def file_of(c):
     return c.replace(":", "_") + ".cbor"
 
@@ -55,13 +65,17 @@ elif args[:2] == ["sign", "--generate-key"]:
     if key.exists():
         sys.exit(f"{key} already exists")
     key.write_text(os.urandom(32).hex() + "\n")
-    set_author(cid(key.read_bytes()))
-    print(f"key      {cid(key.read_bytes())}")
+    set_author(key_of(key.read_bytes()))
+    print(f"key      {key_of(key.read_bytes())}")
 elif args[:2] == ["sign", "--restore-key"]:
     key = here / ".publet" / "signing.key"
     if not key.is_file():
         sys.exit("nothing to restore")
-    made = cid(key.read_bytes())
+    made = key_of(key.read_bytes())
+    expect = next((a.split("=", 1)[1] for a in args if a.startswith("--expect=")), None)
+    committed = expect and (here / "objects" / file_of(expect)).is_file()
+    if not committed and not any(a.startswith("--created=") for a in args):
+        sys.exit("--created is required: the instant the key was made at")
     for arg in args:
         if arg.startswith("--expect=") and arg.split("=", 1)[1] != made:
             sys.exit(f"the secret is the key {made}, not {arg.split('=', 1)[1]}; nothing was changed")
@@ -76,12 +90,14 @@ elif args[:1] == ["publish"]:
     key_file = here / ".publet" / "signing.key"
     if not key_file.is_file():
         sys.exit(f"no signing key at {key_file}")
-    key = cid(key_file.read_bytes())
+    key = key_of(key_file.read_bytes())
     lock_path = here / "corpus.lock"
     lock = json.loads(lock_path.read_text()) if lock_path.is_file() else {"corpus": {"key": key}, "publets": []}
     slug = args[1]
     source = json.loads((here / "publets" / slug / "publet.json").read_text())
     (here / "objects").mkdir(exist_ok=True)
+    # As pub does at a corpus's first publish: its key object is committed.
+    (here / "objects" / file_of(key)).write_bytes(key_object(key_file.read_bytes()))
     rows = [r for r in lock["publets"] if r["slug"].split("#")[0] != slug]
     for name, claim in source["claims"].items():
         data = json.dumps({"author": key, "body": claim, "type": "claim.prose"}, sort_keys=True).encode()

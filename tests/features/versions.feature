@@ -52,6 +52,14 @@ Feature: Approving a doc makes a signed version, its renders in storage
     And "job-applications/globex/versions/versions.yml" contains "approved: '2026-09-22'"
     And "job-applications/globex/versions/versions.yml" contains "rebuilt_from: 3f9e1c2"
     And "corpus/publets/doc.job-applications.globex.engineering/publet.json" contains "rebuilt from the sources of commit 3f9e1c2"
+    And "corpus/publets/doc.job-applications.globex.engineering/publet.json" contains "approved by schryer on 2026-09-22"
+    And the version publet of "job-applications/globex" is dated within a minute of now
+
+  Scenario: $PUB_CREATED pins when a version says it was approved
+    Given pub's dates are pinned to "2030-01-02T03:04:05Z"
+    When I run pubdoc "approve" "job-applications/globex" "--date" "2026-09-22"
+    Then it succeeds
+    And the version publet of "job-applications/globex" is dated "2030-01-02T03:04:05Z"
 
   Scenario: Only the named variant
     When I run pubdoc "approve" "job-applications/acme" "--variant" "research"
@@ -97,16 +105,21 @@ Feature: Approving a doc makes a signed version, its renders in storage
     Then the exit code is 1
     And stderr mentions "no corpus at elsewhere"
 
-  Scenario Outline: approve needs publet's pub 0.4
+  Scenario Outline: approve needs publet's pub 0.4 or 0.5
     Given pub says it is "<first line>"
     When I run pubdoc "approve" "job-applications/globex"
     Then the exit code is 1
-    And stderr mentions "pubdoc drives pub 0.4"
+    And stderr mentions "pubdoc drives pub 0.4 or 0.5"
 
     Examples:
       | first line |
       | pub 0.3.0  |
       | pub 1.0.0  |
+
+  Scenario: approve drives pub 0.5 too
+    Given pub says it is "pub 0.5.0"
+    When I run pubdoc "approve" "job-applications/globex"
+    Then it succeeds
 
   Scenario: versions lists a doc's versions, newest first
     Given pubdoc "approve" "job-applications/globex" has run

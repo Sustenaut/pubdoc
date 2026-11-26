@@ -56,8 +56,26 @@ Feature: pubdoc corpus init makes the corpus versions are signed in, once
     When I run pubdoc "corpus" "init" "--no-backup"
     Then it succeeds
     And it prints "rebuilt the store around corpus/.publet/signing.key"
-    And pub was run in "corpus" with "sign --restore-key --principal=human --expect={trusted}"
+    And pub was run in "corpus" with "sign --restore-key --principal=human --created=2026-09-16T00:00:00Z --expect={trusted}"
     And the trusted key is the one remembered
+
+  Scenario: Once the corpus has published, its committed key object is the key, and pub needs only --expect
+    Given pubdoc "corpus" "init" "--bitwarden-project" "11111111-2222-3333-4444-555555555555" "--backup-name" "pub-signing-key-demo" has run
+    And the trusted key is remembered
+    And the corpus has committed its key object
+    And the corpus's store is gone from this machine, its key put back
+    When I run pubdoc "corpus" "init" "--no-backup"
+    Then it succeeds
+    And pub was run in "corpus" with "sign --restore-key --expect={trusted}"
+    And the trusted key is the one remembered
+
+  Scenario: Before the corpus publishes, the instant the key was made at rebuilds it
+    Given pubdoc "corpus" "init" "--bitwarden-project" "11111111-2222-3333-4444-555555555555" "--backup-name" "pub-signing-key-demo" has run
+    And the trusted key is remembered
+    And the corpus's store is gone from this machine, its key put back
+    When I run pubdoc "corpus" "init" "--no-backup" "--key-created" "2026-11-20T10:11:12Z"
+    Then it succeeds
+    And pub was run in "corpus" with "sign --restore-key --principal=human --created=2026-11-20T10:11:12Z --expect={trusted}"
 
   Scenario: A restored key that is not the trusted one is refused
     Given pubdoc "corpus" "init" "--bitwarden-project" "11111111-2222-3333-4444-555555555555" "--backup-name" "pub-signing-key-demo" has run
