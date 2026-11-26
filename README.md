@@ -278,8 +278,9 @@ corpus: {path: corpus}                          # from the project: <project>/co
 
 Storage takes `$PUBDOC_STORAGE_TOKEN`, else `$GITHUB_TOKEN`, else `gh auth
 token`: a token that may push to the tenant's repository. Signing and
-verifying need publet's `pub` 0.4 (`cargo install --locked --git
-https://github.com/Sustenaut/publet --tag v0.4.0 publet-cli`); comparing
+verifying need publet's `pub` 0.4 or 0.5 (`cargo install --locked --git
+https://github.com/Sustenaut/publet --tag v0.5.0 publet-cli`, or the static
+`pub` each release attaches); comparing
 needs poppler.
 
 A corpus is set up once, by its key's owner, with

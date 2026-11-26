@@ -105,16 +105,21 @@ Feature: Approving a doc makes a signed version, its renders in storage
     Then the exit code is 1
     And stderr mentions "no corpus at elsewhere"
 
-  Scenario Outline: approve needs publet's pub 0.4
+  Scenario Outline: approve needs publet's pub 0.4 or 0.5
     Given pub says it is "<first line>"
     When I run pubdoc "approve" "job-applications/globex"
     Then the exit code is 1
-    And stderr mentions "pubdoc drives pub 0.4"
+    And stderr mentions "pubdoc drives pub 0.4 or 0.5"
 
     Examples:
       | first line |
       | pub 0.3.0  |
       | pub 1.0.0  |
+
+  Scenario: approve drives pub 0.5 too
+    Given pub says it is "pub 0.5.0"
+    When I run pubdoc "approve" "job-applications/globex"
+    Then it succeeds
 
   Scenario: versions lists a doc's versions, newest first
     Given pubdoc "approve" "job-applications/globex" has run

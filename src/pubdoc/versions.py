@@ -43,9 +43,9 @@ from .projects import VERSIONS, Doc, Render
 
 INDEX = "versions.yml"
 LOCK = "corpus.lock"
-PUB_SUPPORTED = ("0.4.",)
+PUB_SUPPORTED = ("0.4.", "0.5.")
 PUB_INSTALL = ("cargo install --locked --git https://github.com/Sustenaut/publet "
-               "--tag v0.4.0 publet-cli")
+               "--tag v0.5.0 publet-cli")
 IDENTITY = ["doc", "variant", "version", "approved", "approved_by", "pubdoc", "commit", "rebuilt_from"]
 SOURCES = ["path", "sha256"]
 RENDERS = ["layout", "format", "sha256", "bytes", "url"]
@@ -65,10 +65,10 @@ def require_pub() -> str:
     program = shutil.which(pub_program())
     if not program:
         raise VersionError(f"no `{pub_program()}` on PATH: pubdoc signs and verifies versions with "
-                           f"publet's pub 0.4; install it: {PUB_INSTALL}")
+                           f"publet's pub 0.4 or 0.5; install it: {PUB_INSTALL}")
     first = subprocess.run([program, "--version"], capture_output=True, text=True).stdout.split("\n")[0]
     if not any(first.startswith(f"pub {v}") for v in PUB_SUPPORTED):
-        raise VersionError(f"pubdoc drives pub 0.4, and `{program} --version` says {first!r}; "
+        raise VersionError(f"pubdoc drives pub 0.4 or 0.5, and `{program} --version` says {first!r}; "
                            f"install it: {PUB_INSTALL}")
     return program
 
