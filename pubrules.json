@@ -3,7 +3,9 @@
   "bin": "pubdoc",
   "ci": {
     "language": "python",
-    "release": {},
+    "release": {
+      "pubrel": "0.7.1"
+    },
     "with": {
       "sonar-args": "-Dsonar.issue.ignore.multicriteria=pylock -Dsonar.issue.ignore.multicriteria.pylock.ruleKey=text:S8565 -Dsonar.issue.ignore.multicriteria.pylock.resourceKey=pyproject.toml"
     }
@@ -17,7 +19,16 @@
     "release_app": 5529889
   },
   "signing_keys": [
-    {"path": "corpus/.publet/signing.key", "bitwarden": {"project": {"id": "377de170-5487-40f7-9a01-b4f50064e1c5", "name": "Pub"}, "name": "pub-signing-key-pubdoc"}}
+    {
+      "path": "corpus/.publet/signing.key",
+      "bitwarden": {
+        "project": {
+          "id": "377de170-5487-40f7-9a01-b4f50064e1c5",
+          "name": "Pub"
+        },
+        "name": "pub-signing-key-pubdoc"
+      }
+    }
   ],
   "mirror": {
     "wheels": "https://storage.sustenaut.eu/wheels",

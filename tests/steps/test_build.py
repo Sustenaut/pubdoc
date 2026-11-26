@@ -8,6 +8,7 @@ from conftest import calls
 
 scenarios("build.feature")
 scenarios("templates.feature")
+scenarios("doc_templates.feature")
 
 
 @then(parsers.parse('npx was run in "{where}" with "{args}"'))

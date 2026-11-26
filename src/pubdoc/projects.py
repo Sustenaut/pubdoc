@@ -102,6 +102,22 @@ class Doc:
                     return candidate
         return None
 
+    def template(self, layout: str) -> str | None:
+        """The template doc.yml's `templates` gives `layout`, as project.yml
+        would name it: a name pubdoc carries, or a path relative to the
+        project's directory (a doc.yml's path is relative to the doc's)."""
+        template = self.config.get("templates", {}).get(layout)
+        if not template or not is_path(template):
+            return template
+        relative = os.path.relpath((self.path / template).resolve(), self.project.path.resolve())
+        return relative if "/" in relative else f"./{relative}"
+
+    def layout_spec(self, layout: str) -> dict:
+        """The project's `layout`, with the template doc.yml gives it, if any."""
+        spec = self.project.config["layouts"][layout]
+        template = self.template(layout)
+        return {**spec, "template": template} if template else spec
+
     def renders(self, variant: str | None = None, layout: str | None = None) -> list["Render"]:
         """Every variant x layout this doc builds, or just those named; a
         layout whose (optional) part the doc does not supply is left out."""
@@ -112,7 +128,7 @@ class Doc:
             for name in self.layouts():
                 if layout and name != layout:
                     continue
-                spec = self.project.config["layouts"][name]
+                spec = self.layout_spec(name)
                 source = self.source(spec["part"], v)
                 if source:
                     found.append(Render(self, v, name, spec, source))
@@ -435,6 +451,7 @@ def doc_problems(doc: Doc, notes: set[str]) -> list[Problem]:
         for name in doc.config.get(key, []):
             if name not in everything:
                 found.append(Problem(file, f"{key}: {missing(key[:-1], name, everything)} in project.yml"))
+    found.extend(doc_template_problems(doc, file))
     if "review" in doc.config:
         reviewers = config.get("roles", {}).get("reviewers", [])
         found.extend(review_problems(file, "review", doc.config["review"], reviewers, notes))
@@ -445,14 +462,43 @@ def doc_problems(doc: Doc, notes: set[str]) -> list[Problem]:
             found.extend(publication_problems(file, here, entry, doc.layouts(), doc.variants(), notes))
             found.extend(narrower_publication(file, here, entry, config.get("publish", []), config["variants"]))
 
+    # A part is required of a doc only when one of its layouts renders it: a
+    # doc whose doc.yml narrows its layouts to a CV's needs no letter.
+    rendered = {config["layouts"][name].get("part") for name in doc.layouts()}
     for part, spec in config["parts"].items():
-        if not spec["required"]:
+        if not spec["required"] or part not in rendered:
             continue
         for variant in doc.variants():
             if not doc.source(part, variant):
                 start = f", and shared part {spec['starts-from']} has none" if "starts-from" in spec else ""
                 found.append(Problem(doc.path, f"no {part}.md or {part}.{variant}.md for required part "
                                      f"{part!r} in variant {variant!r}{start}"))
+    return found
+
+
+def doc_template_problems(doc: Doc, file: Path) -> list[Problem]:
+    """A doc.yml's `templates` may give another template only to a layout the
+    doc keeps that a project template renders, and it must be one that
+    layout's project.yml entry could name."""
+    found = []
+    layouts = doc.project.config["layouts"]
+    for layout, given in doc.config.get("templates", {}).items():
+        where = f"templates.{layout}"
+        if layout not in doc.layouts():
+            found.append(Problem(file, f"{where}: {missing('layout', layout, doc.layouts())} this doc keeps"))
+            continue
+        if "template" not in layouts[layout]:
+            found.append(Problem(file, f"{where}: {layout} is made by an exporter, not a template"))
+            continue
+        template = doc.template(layout)
+        if is_path(template):
+            if problem := local_template_problem(doc.project, template):
+                if problem.startswith(f"{template} "):
+                    # Named as the doc.yml gives it, not as the project would.
+                    problem = given + problem[len(template):]
+                found.append(Problem(file, f"{where}: {problem}"))
+        elif template not in registry.templates():
+            found.append(Problem(file, f"{where}: {missing('template', given, registry.templates())}"))
     return found
 
 
