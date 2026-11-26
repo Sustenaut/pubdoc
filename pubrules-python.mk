@@ -1,4 +1,4 @@
-# Managed by pubrules 0.43.0: `pubrules sync` rewrites this file, and
+# Managed by pubrules 0.49.1: `pubrules sync` rewrites this file, and
 # `pubrules sync --check` fails when it differs. Include it from the Makefile,
 # and set the variables below there, before the include; targets of your own
 # go there too. It is the same in every Python package, so a rule set here
@@ -17,7 +17,7 @@ FUNCTIONAL_ENV ?=
 # What venv installs editable, with no dependencies: the checkout, or nothing.
 EDITABLE ?= .
 
-.PHONY: help venv functional lock sync-check wheel clean
+.PHONY: help venv functional lint fmt lock sync-check wheel clean
 
 help: ## Available targets
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk -F':.*?## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -34,10 +34,20 @@ functional: ## The Gherkin suite on every core, with its coverage in coverage/co
 	COVERAGE_FILE=coverage/.coverage .venv/bin/coverage combine -q
 	COVERAGE_FILE=coverage/.coverage .venv/bin/coverage xml -q
 
+# Ruff, with the rules of pubrules-ruff.toml, which pyproject.toml extends:
+# what the lint job runs where the ci block gives "lint": "make lint".
+lint: ## Ruff's lint and format checks, as CI runs them
+	.venv/bin/ruff check .
+	.venv/bin/ruff format --check .
+
+fmt: ## Format the code, and apply Ruff's safe fixes
+	.venv/bin/ruff check --fix .
+	.venv/bin/ruff format .
+
 lock: ## Pin tests/requirements.txt, with hashes, in tests/requirements.lock
 	./pubrules lock
 
-sync-check: ## Fail if pubrules's managed files differ from the pinned version's
+sync-check: ## Fail if pubrules' managed files differ from the pinned version's
 	./pubrules sync --check
 
 wheel: ## Build the wheel a release carries
