@@ -1,4 +1,0 @@
-{
-  "category": "changed",
-  "change": "A version publet's created is when it was approved (or $PUB_CREATED, which pins pub's dates too), not midnight of the doc's date: created is the signer's claim of when it signed. The doc's date stays in the identity claim's sentence and data row, and in versions.yml's approved"
-}

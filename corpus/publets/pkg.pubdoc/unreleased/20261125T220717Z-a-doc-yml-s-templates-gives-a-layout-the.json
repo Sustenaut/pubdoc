@@ -1,4 +1,0 @@
-{
-  "category": "added",
-  "change": "A doc.yml's templates gives a layout the doc keeps, one a template renders, another template for that doc alone: a template pubdoc carries, or a template directory of the repository by a path relative to the doc's directory; check holds it to project.yml's rules"
-}
