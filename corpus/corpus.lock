@@ -3,8 +3,8 @@
   "corpus": {
     "domain": "pub:sha2-256:7u4asmnr4jfihdvcmckal2uxgkbmwawu7b6phngts2sgojppkwmq",
     "generation": {
-      "cid": "pub:sha2-256:7e3jfvirx23gr323vf3c3ee3j3o7gcypqkon2f5o45oyygrrtm7q",
-      "index": 8
+      "cid": "pub:sha2-256:unqfwsofsxta6uuwfr64xgtmdvtqbyza23mejq25yhsgfud67exa",
+      "index": 9
     },
     "imports": {},
     "key": "pub:sha2-256:pymtpc4dkw6posu4vvubrcwenpiv72wlqmlbp6wdgsrzb6aeynuq",
@@ -18,8 +18,8 @@
     ]
   },
   "publets": [
-    {"slug": "pkg.pubdoc", "kind": "doc", "tag": "PKG-PUBDOC-11-2026", "source": "publets/pkg.pubdoc", "cid": "pub:sha2-256:nxozkbxkq3u73p6kdqjf2kknunw27e2h3id3mv6z7ew5etusym6q", "genesis": "pub:sha2-256:wdw2hzch3rduhhlbyrmn4c5ntewzeykjwqy3b33wscazrif5pkfq", "deps": ["pkg.pubdoc#identity", "pkg.pubdoc#release"]},
-    {"slug": "pkg.pubdoc#identity", "kind": "claim", "source": "publets/pkg.pubdoc", "cid": "pub:sha2-256:yuskplq5knmitgnhr333j66ur6pe7o6erifjylopldagh72tvq7a", "genesis": "pub:sha2-256:byg5jtbf3jyfymdflxsxyskhheeqh4jios72he6nq2ieevtiskxq", "deps": []},
-    {"slug": "pkg.pubdoc#release", "kind": "claim", "source": "publets/pkg.pubdoc", "cid": "pub:sha2-256:kgszufxefu6dtsx2id474ewzj5pvsozut7bm5cz2a4vfsq6qrcqq", "genesis": "pub:sha2-256:aeqewxx6zeozwfbdjfigk6aus2r2boetkznuepx3ff5hhoklf5zq", "deps": ["pkg.pubdoc#identity"]}
+    {"slug": "pkg.pubdoc", "kind": "doc", "tag": "PKG-PUBDOC-11-2026", "source": "publets/pkg.pubdoc", "cid": "pub:sha2-256:4iiicp2hnwxa27hzbuexb4xyfaybwgzoocab7t6ovko6xnakgckq", "genesis": "pub:sha2-256:wdw2hzch3rduhhlbyrmn4c5ntewzeykjwqy3b33wscazrif5pkfq", "deps": ["pkg.pubdoc#identity", "pkg.pubdoc#release"]},
+    {"slug": "pkg.pubdoc#identity", "kind": "claim", "source": "publets/pkg.pubdoc", "cid": "pub:sha2-256:oqzdive76daud6vna567i3dgnpikc2orzkeq25eu2oepxasinozq", "genesis": "pub:sha2-256:byg5jtbf3jyfymdflxsxyskhheeqh4jios72he6nq2ieevtiskxq", "deps": []},
+    {"slug": "pkg.pubdoc#release", "kind": "claim", "source": "publets/pkg.pubdoc", "cid": "pub:sha2-256:eqliyp4yrhsphf4xsvtaag7mcxqbygxhncwhij7bmleruvpgi7oq", "genesis": "pub:sha2-256:aeqewxx6zeozwfbdjfigk6aus2r2boetkznuepx3ff5hhoklf5zq", "deps": ["pkg.pubdoc#identity"]}
   ]
 }

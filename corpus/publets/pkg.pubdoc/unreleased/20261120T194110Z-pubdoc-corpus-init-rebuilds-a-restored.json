@@ -1,4 +1,0 @@
-{
-  "category": "fixed",
-  "change": "pubdoc corpus init rebuilds a restored key with pub 0.5: from the key object the corpus commits in objects/ with --expect alone, else with --created, the instant the key was made at (--key-created INSTANT, default pub 0.4's 2026-09-16T00:00:00Z), which pub 0.5 requires"
-}
